@@ -24,7 +24,6 @@ def main():
 
     rsync_settings = conf.get_section("rsync")
     rsync_cmd = rsync_settings.get("cmd", "rsync")
-    rsync_args = rsync_settings["args"]
 
     conf_default = conf.get_section("default")
 
@@ -44,6 +43,9 @@ def main():
 
     conf_default_create_destination = conf_default.get("create_destination",
                                                        None)
+
+    conf_default_rsync_args = conf_default.get("rsync_args", None)
+    conf_default_one_filesystem = conf_default.get("one_fs", None)
 
     repositories = []
     for task in conf.get_sections("task"):
@@ -75,6 +77,8 @@ def main():
         create_destination = task.get("create_destination",
                                       conf_default_create_destination)
 
+        one_filesystem = task.get("one_fs", conf_default_one_filesystem)[0]
+
         filter_patterns = task.get("filter", conf_default_filter_patterns)
 
         include_patterns = task.get("include", conf_default_include_patterns)
@@ -82,6 +86,8 @@ def main():
 
         include_files = task.get("includefile", conf_default_include_files)
         exclude_files = task.get("excludefile", conf_default_exclude_files)
+
+        conf_rsync_args = task.get("rsync_args", conf_default_rsync_args)
 
         if include_files is not None:
             for include_file in include_files:
@@ -116,6 +122,17 @@ def main():
             print("destination is no a directory, will be skipped.")
             continue
 
+        if conf_rsync_args is None:
+            print("no rsync arguments specified. skipping repository.")
+            continue
+
+        rsync_args = []
+        for arg in conf_rsync_args:
+            rsync_args.extend(arg.split())
+
+        if one_filesystem:
+            rsync_args.append("-x")
+
         repositories.append(
             Repository(sources,
                        destination,
@@ -123,7 +140,8 @@ def main():
                        task["interval"],
                        task["keep"],
                        rsyncfilter,
-                       rsync_logfile_options))
+                       rsync_logfile_options,
+                       rsync_args))
 
     while True:
         for repository in repositories:
@@ -142,6 +160,7 @@ def main():
                     print("rsyncing")
                     destination = os.path.join(new_backup[1], new_backup[2])
                     logfile_options = new_backup[6]
+                    rsync_args = new_backup[7]
                     (returncode, stdoutdata, stderrdata) = rsync.rsync(
                         rsync_cmd, source, destination, link_dest, rsync_args,
                         new_backup[5], logfile_options)
@@ -180,13 +199,14 @@ def main():
 class Repository(object):
 
     def __init__(self, sources, destination, name, intervals, keep,
-                 rsyncfilter, rsync_logfile_options):
+                 rsyncfilter, rsync_logfile_options, rsync_args):
         self.sources = sources
         self.destination = destination
         self.name = name
         self.intervals = [(interval_name, cron.Cronjob(interval)) for
                           (interval_name, interval) in intervals.items()]
         self.rsync_logfile_options = rsync_logfile_options
+        self.rsync_args = rsync_args
 
         self.keep = keep
         self.rsyncfilter = rsyncfilter
@@ -238,7 +258,8 @@ class Repository(object):
                                      datetime.datetime.now().strftime(
                                          "%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
         return (new_sources, new_destination, new_folder, new_link_ref,
-                new_name, self.rsyncfilter, self.rsync_logfile_options)
+                new_name, self.rsyncfilter, self.rsync_logfile_options,
+                self.rsync_args)
 
     def get_expired_backups(self):
         # we will sort the folders and just loop from oldest to newest until we
