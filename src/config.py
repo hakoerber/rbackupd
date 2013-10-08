@@ -46,9 +46,18 @@ class Config(object):
     def _parse_key_value(self, line):
         if not self._is_key_value(line):
             raise ParseError()
-        (key, value) =  line.split("=")
+        (key_and_tag, value) =  line.split("=")
         value = value.strip()
-        key = key.strip()
+        key_and_tag = key_and_tag.strip()
+
+        if "[" in key_and_tag and key_and_tag.endswith("]"):
+            (key, tag) = key_and_tag.rstrip("]").split("[")
+            if not tag.startswith('"') or not tag.endswith('"'):
+                raise ParseError()
+            tag = tag[1:-1]
+        else:
+            tag = None
+            key = key_and_tag
         if value.isdigit():
             value = int(value)
         elif value.lower() in ["true"]:
@@ -59,7 +68,7 @@ class Config(object):
             value = None
         else:
             value = value[1:-1]
-        return (key, value)
+        return (key, tag, value)
 
     def _is_valid(self, line):
         return _is_comment(line) or _is_section(line) or _is_key_value(line)
@@ -78,11 +87,17 @@ class Config(object):
             elif self._is_key_value(line):
                 if section == None:
                     raise ParseError()
-                (key, value) = self._parse_key_value(line)
-                if not key in section[1]:
-                    section[1][key] = [value]
+                (key, tag, value) = self._parse_key_value(line)
+                if tag is None:
+                    if not key in section[1]:
+                        section[1][key] = [value]
+                    else:
+                        section[1][key].append(value)
                 else:
-                    section[1][key].append(value)
+                    if not key in section[1]:
+                        section[1][key] = {tag: value}
+                    else:
+                        section[1][key].append({tag: value})
             else:
                 raise ParseError()
 
