@@ -1,6 +1,8 @@
+import os
 import subprocess
 
-def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter):
+
+def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter, loggingOptions):
     args = [cmd]
 
     args.extend(rsyncfilter.get_args())
@@ -10,10 +12,18 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter):
     if link_ref is not None:
         args.append("--link-dest=%s" % link_ref)
 
+    print(loggingOptions)
+    if loggingOptions is not None:
+        args.append("--log-file=%s" % os.path.join(destination, loggingOptions.log_name))
+        args.append("--log-file-format=%s" % loggingOptions.log_format)
+
     args.append(source)
     args.append(destination)
 
     print(" ".join(args))
+
+    # create the directory first, otherwise logging will fail
+    os.mkdir(destination)
 
     proc = subprocess.Popen(args,
                             stdout=subprocess.PIPE,
@@ -21,6 +31,10 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter):
     (stdoutdata, stderrdata) = proc.communicate()
     return (proc.returncode, stdoutdata, stderrdata)
 
+class LogfileOptions(object):
+    def __init__(self, log_name, log_format):
+        self.log_name = log_name
+        self.log_format = log_format
 
 
 class Filter(object):
