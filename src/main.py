@@ -19,8 +19,6 @@ def main():
         sys.exit(1)
 
     conf = config.Config(path_config)
-    print(conf.get_structure())
-    sys.exit()
 
     rsync_settings = conf.get_section("rsync")
     rsync_cmd = rsync_settings.get("cmd", "rsync")
@@ -85,25 +83,25 @@ def main():
             Repository(sources,
                        destination,
                        task["name"][0],
-                       task["interval"][0],
-                       task["keep"][0],
+                       task["interval"],
+                       task["keep"],
                        rsyncfilter))
 
     while True:
         for repository in repositories:
-            if repository.check_necessity():
-                new_backup = repository.get_backup_params()
-                print("New backup:", new_backup)
+            necessary_backups = repository.get_necessary_backups()
+            if necessary_backups is None:
+                print("no backup necessary")
+            else:
+                new_backup_interval_name = min(necessary_backups)[0]
+                new_backup = repository.get_backup_params(new_backup_interval_name)
                 for source in new_backup[0]:
+                    link_dest = None if new_backup[3] is None else os.path.join(new_backup[1], new_backup[3])
                     print("rsyncing")
                     (returncode, stdoutdata, stderrdata) = \
                     rsync.rsync(rsync_cmd, source, os.path.join(new_backup[1], new_backup[2]),
-                                os.path.join(new_backup[1], new_backup[3].name), rsync_args, new_backup[5])
+                                link_dest, rsync_args, new_backup[5])
                     print("rsync exited with code %s\nstdout:\n%s\nstderr:\n%s" % (returncode, stdoutdata, stderrdata))
-                    #def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter):
-                    #return (new_sources, new_destination, new_folder, new_link_ref, new_name, self.rsyncfilter)
-            else:
-                print("no backup necessary")
 
             expired_backups = repository.get_expired_backups()
             if expired_backups is not None:
@@ -112,8 +110,11 @@ def main():
             else:
                 print("no expired backups")
         now = datetime.datetime.now()
-        nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
-        wait_seconds = (nextmin - now).seconds + 1
+        if now.minute == 59:
+            wait_seconds = 1
+        else:
+            nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
+            wait_seconds = (nextmin - now).seconds + 1
         print(datetime.datetime.now(), wait_seconds)
         time.sleep(wait_seconds)
 
@@ -121,41 +122,61 @@ def main():
 
 class Repository(object):
 
-    def __init__(self, sources, destination, name, interval, keep, rsyncfilter):
+    def __init__(self, sources, destination, name, intervals, keep, rsyncfilter):
         self.sources = sources
         self.destination = destination
         self.name = name
-        self.interval = interval
+        self.intervals = [(interval_name, cron.Cronjob(interval)) for (interval_name, interval) in intervals.items()]
+
         self.keep = keep
         self.rsyncfilter = rsyncfilter
 
-        self.cronjob = cron.Cronjob(self.interval)
+        self._oldfolders = None
+        self._backups = self._parse_folders(self.destination)
 
-        self._folders = [BackupFolder(folder) for folder in os.listdir(destination)]
+    @property
+    def backups(self):
+        folders = os.listdir(self.destination)
+        if folders != self._oldfolders:
+            self._backups = self._parse_folders(self.destination)
+            self._oldfolders = folders
+        return self._backups
 
-    def check_necessity(self):
+    def _parse_folders(self, directory):
+        return [BackupFolder(folder) for folder in os.listdir(directory)]
+
+    def get_necessary_backups(self):
         latest_backup = self._get_latest_backup()
         if latest_backup is None:
-            return True
+            return self.intervals
 
         # cron.has_occured_since INCLUDES all occurences of the cronjob in the search
         # therefore if would match the last backup if it occured EXACTLY at the given
         # time in the cronjob. ugly fix here: were just add 1 microsecond to the latest
         # backup
 
-        latest_backup = latest_backup.date
-        latest_backup += datetime.timedelta(microseconds=1)
-        if self.cronjob.has_occured_since(latest_backup):
-            return True
-        return False
+        latest_backup_date = latest_backup.date
+        latest_backup_date += datetime.timedelta(microseconds=1)
 
-    def get_backup_params(self):
+        necessary_backups = []
+
+        for (interval_name, interval) in self.intervals:
+            if interval.has_occured_since(latest_backup_date):
+                necessary_backups.append((interval_name, interval))
+
+        if len(necessary_backups) == 0:
+            return None
+        return necessary_backups
+
+
+    def get_backup_params(self, new_backup_interval_name):
         new_sources = self.sources
         new_destination = self.destination
         new_name = self.name
-        new_backuptype = None
         new_link_ref = self._get_latest_backup()
-        new_folder = "%s_%s%s" % (new_name, datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
+        new_link_ref = new_link_ref.name if new_link_ref is not None else None
+        new_folder = "%s_%s_%s%s" % (new_name, new_backup_interval_name,
+                                     datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
         return (new_sources, new_destination, new_folder, new_link_ref, new_name, self.rsyncfilter)
 
 
@@ -163,23 +184,35 @@ class Repository(object):
         # we will sort the folders and just loop from oldest to newest until we have enough
         # expired backups.
         result = []
-        count = len(self._folders) - self.keep
-        if count <= 0:
-            return None
-        self._folders.sort(key=lambda folder: folder.date, reverse=False)
-        for i in range(0, count):
-            result.append(self._folders[i])
+        for interval in self.intervals:
+            interval_name = interval[0]
+
+            if interval_name not in self.keep:
+                print("No corresponding interval found for keep value %s" % interval_name)
+                sys.exit(9)
+
+            backups_of_that_interval = list(filter(lambda backup: backup.interval_name == interval_name, self.backups))
+
+            count = len(backups_of_that_interval) - self.keep[interval_name]
+
+            if count <= 0:
+                continue
+
+            backups_of_that_interval.sort(key=lambda backup: backup.date, reverse=False)
+            for i in range(0, count):
+                result.append(self.backups[i])
+
         return result
 
     def _get_latest_backup(self):
-        if len(self._folders) == 0:
+        if len(self.backups) == 0:
             return None
-        if len(self._folders) == 1:
-            return self._folders[0]
-        latest = self._folders[0]
-        for folder in self._folders:
-            if folder.date > latest.date:
-                latest = folder
+        if len(self.backups) == 1:
+            return self.backups[0]
+        latest = self.backups[0]
+        for backup in self.backups:
+            if backup.date > latest.date:
+                latest = backup
         return latest
 
 class BackupFolder(object):
@@ -189,10 +222,14 @@ class BackupFolder(object):
 
     @property
     def date(self):
-        datestring = self.name.split("_")[1]
+        datestring = self.name.split("_")[2]
         datestring = datestring[:datestring.find(BACKUP_SUFFIX)]
         date = datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S")
         return date
+
+    @property
+    def interval_name(self):
+        return self.name.split("_")[1]
 
     @property
     def name(self):
