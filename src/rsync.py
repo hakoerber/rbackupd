@@ -13,7 +13,6 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     if link_ref is not None:
         args.append("--link-dest=%s" % link_ref)
 
-    print(loggingOptions)
     if loggingOptions is not None:
         args.append("--log-file=%s" % os.path.join(destination,
                                                    loggingOptions.log_name))

@@ -42,6 +42,9 @@ def main():
     conf_default_rsync_logfile_format = conf_default.get(
         "rsync_logfile_format", None)
 
+    conf_default_create_destination = conf_default.get("create_destination",
+                                                       None)
+
     repositories = []
     for task in conf.get_sections("task"):
         destination = task["destination"][0]
@@ -68,6 +71,9 @@ def main():
                                                          rsync_logfile_format)
         else:
             rsync_logfile_options = None
+
+        create_destination = task.get("create_destination",
+                                      conf_default_create_destination)
 
         filter_patterns = task.get("filter", conf_default_filter_patterns)
 
@@ -100,6 +106,15 @@ def main():
         rsyncfilter = rsync.Filter(include_patterns, exclude_patterns,
                                    include_files, exclude_files,
                                    filter_patterns)
+
+        if not os.path.exists(destination):
+            if not create_destination:
+                print("destination does not exists, will no be created. "
+                      "repository will be skipped.")
+                continue
+        elif not os.path.isdir(destination):
+            print("destination is no a directory, will be skipped.")
+            continue
 
         repositories.append(
             Repository(sources,
@@ -138,7 +153,7 @@ def main():
                         sys.exit(10)
 
             expired_backups = repository.get_expired_backups()
-            if expired_backups is not None:
+            if len(expired_backups) > 0:
                 for expired_backup in expired_backups:
                     print("expired:", expired_backup.name)
                     returncode = subprocess.call(
@@ -159,7 +174,6 @@ def main():
         else:
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
-        print(datetime.datetime.now(), wait_seconds)
         time.sleep(wait_seconds)
 
 
