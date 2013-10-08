@@ -60,9 +60,9 @@ class Config(object):
             key = key_and_tag
         if value.isdigit():
             value = int(value)
-        elif value.lower() in ["true"]:
+        elif value.lower() in ["true", "yes"]:
             value = True
-        elif value.lower() in ["false"]:
+        elif value.lower() in ["false", "no"]:
             value = False
         elif value == "":
             value = None
