@@ -45,19 +45,19 @@ _name_mapping = ({},
                   "NOV": 11, "DEC": 12},
                  {},
                  {"MON": 1, "TUE": 2, "WED": 3, "THU": 4, "FRI": 5, "SAT": 6,
-                 "SUN": 7})
+                  "SUN": 7})
 
 
 class Cronjob(object):
     """
-    Represents a single cronjob schedule. It will not execute any code, but will
-    provice methods to poll information about that cronjob in relation to a
-    specific time, for example whether the cronjob elapsed between to different
-    times and so on.
+    Represents a single cronjob schedule. It will not execute any code, but
+    will provice methods to poll information about that cronjob in relation to
+    a specific time, for example whether the cronjob elapsed between to
+    different times and so on.
     Look here (https://en.wikipedia.org/wiki/Cron#CRON_expression) for an
-    deeper insight into the formatting of a cron expression. This class does not
-    support all formatting options mentioned in this article, and the order of
-    the fields differ.
+    deeper insight into the formatting of a cron expression. This class does
+    not support all formatting options mentioned in this article, and the order
+    of the fields differ.
 
     Fields:
     <minute> <hour> <day_of_month> <month> <year> [<weekday>]
@@ -75,15 +75,15 @@ class Cronjob(object):
       (inclusive).
     - '*' to match all possible values for the given position.
     - '/<step>' as the last specifier to only match all values of the be
-      preceding range that can be reached by starting at the first matched value
-      and going steps of size <step>.
+      preceding range that can be reached by starting at the first matched
+      value and going steps of size <step>.
     - ',' to separate different expressions, the union of all given expressions
       will be matched.
 
     Examples:
     0 * * * * * matches the beginning of every hour.
-    3,*/5 1,4 * * * * matches the third and every fifth minute beginning at 0 of
-      the first and forth hour everyday..
+    3,*/5 1,4 * * * * matches the third and every fifth minute beginning at 0
+      of the first and forth hour everyday..
     3-59/5 2,4 * * * * does the same as above, apart from maching the third and
       every fifth minute starting at the second one instead of starting at 0.
 
@@ -209,13 +209,13 @@ class Cronjob(object):
         #
         # if we choose the equal value, we just continue with our procedure
         #
-        # if we cannot choose a lower or equal value that means that there is no
-        # matching for the current i+1 position. so we have to choose the next
-        # lower possible value for the i+1 position. if this is not possible,
-        # either because i+1 does not exist (we are currently at the year
-        # position) or there already is the lowest possible value at position
-        # i+1, that means that d_schedule is older than every possible value in
-        # self.schedule, so we raise an error
+        # if we cannot choose a lower or equal value that means that there is
+        # no matching for the current i+1 position. so we have to choose the
+        # next lower possible value for the i+1 position. if this is not
+        # possible,  either because i+1 does not exist (we are currently at the
+        # year position) or there already is the lowest possible value at
+        # position i+1, that means that d_schedule is older than every possible
+        # value in self.schedule, so we raise an error
         #
         # this is shittier than everything, but it somehow passes the tests
         max_only_now = False
@@ -408,7 +408,7 @@ def _parse_subexpression_at_index(expression, index):
         possible_values = set(range(start, end + 1))
     elif '*' == rest:
         possible_values = set(_ranges[index])
-    elif _get_integer_at_index(rest, index) != None:
+    elif _get_integer_at_index(rest, index) is not None:
         possible_values = {_get_integer_at_index(rest, index)}
     else:
         raise ParseError(expression, "Invalid expression")

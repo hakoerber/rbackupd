@@ -1,14 +1,15 @@
-import sys
-import os
-import time
 import datetime
+import os
 import subprocess
+import sys
+import time
 
 import config
 import cron
 import rsync
 
 BACKUP_SUFFIX = ".snapshot"
+
 
 def main():
     if len(sys.argv) != 2:
@@ -27,7 +28,7 @@ def main():
 
     conf_default = conf.get_section("default")
 
-    conf_default_filter_patterns = conf_default.get("filter" , None)
+    conf_default_filter_patterns = conf_default.get("filter", None)
 
     conf_default_include_patterns = conf_default.get("include", None)
     conf_default_exclude_patterns = conf_default.get("exclude", None)
@@ -36,8 +37,10 @@ def main():
     conf_default_exclude_files = conf_default.get("excludefile", None)
 
     conf_default_rsync_logfile = conf_default.get("rsync_logfile", None)
-    conf_default_rsync_logfile_name = conf_default.get("rsync_logfile_name" , None)
-    conf_default_rsync_logfile_format = conf_default.get("rsync_logfile_format", None)
+    conf_default_rsync_logfile_name = conf_default.get("rsync_logfile_name",
+                                                       None)
+    conf_default_rsync_logfile_format = conf_default.get(
+        "rsync_logfile_format", None)
 
     repositories = []
     for task in conf.get_sections("task"):
@@ -55,11 +58,14 @@ def main():
                 sys.exit(4)
 
         rsync_logfile = task.get("rsync_logfile", conf_default_rsync_logfile)
-        rsync_logfile_name = task.get("rsync_logfile_name", conf_default_rsync_logfile_name)[0]
-        rsync_logfile_format = task.get("rsync_logfile_format", conf_default_rsync_logfile_format)[0]
+        rsync_logfile_name = task.get("rsync_logfile_name",
+                                      conf_default_rsync_logfile_name)[0]
+        rsync_logfile_format = task.get("rsync_logfile_format",
+                                        conf_default_rsync_logfile_format)[0]
 
         if rsync_logfile:
-            rsync_logfile_options = rsync.LogfileOptions(rsync_logfile_name, rsync_logfile_format)
+            rsync_logfile_options = rsync.LogfileOptions(rsync_logfile_name,
+                                                         rsync_logfile_format)
         else:
             rsync_logfile_options = None
 
@@ -91,7 +97,9 @@ def main():
                     print("exclude file is not a valid file")
                     sys.exit(8)
 
-        rsyncfilter = rsync.Filter(include_patterns, exclude_patterns, include_files, exclude_files, filter_patterns)
+        rsyncfilter = rsync.Filter(include_patterns, exclude_patterns,
+                                   include_files, exclude_files,
+                                   filter_patterns)
 
         repositories.append(
             Repository(sources,
@@ -109,17 +117,22 @@ def main():
                 print("no backup necessary")
             else:
                 new_backup_interval_name = min(necessary_backups)[0]
-                new_backup = repository.get_backup_params(new_backup_interval_name)
+                new_backup = repository.get_backup_params(
+                    new_backup_interval_name)
                 for source in new_backup[0]:
-                    link_dest = None if new_backup[3] is None else os.path.join(new_backup[1], new_backup[3])
+                    if new_backup[3] is None:
+                        link_dest = None
+                    else:
+                        link_dest = os.path.join(new_backup[1], new_backup[3])
                     print("rsyncing")
                     destination = os.path.join(new_backup[1], new_backup[2])
                     logfile_options = new_backup[6]
-                    (returncode, stdoutdata, stderrdata) = \
-                    rsync.rsync(rsync_cmd, source, destination,
-                                link_dest, rsync_args, new_backup[5], logfile_options)
-                    print("rsync exited with code %s\n\nstdout:\n%s\n\nstderr:\n%s\n" %
-                            (returncode, str(stdoutdata), str(stderrdata)))
+                    (returncode, stdoutdata, stderrdata) = rsync.rsync(
+                        rsync_cmd, source, destination, link_dest, rsync_args,
+                        new_backup[5], logfile_options)
+                    print("rsync exited with code %s\n\nstdout:\n%s\n\n"
+                          "stderr:\n%s\n" % (returncode, str(stdoutdata),
+                                             str(stderrdata)))
                     if returncode != 0:
                         print("rsync FAILED. aborting")
                         sys.exit(10)
@@ -127,9 +140,11 @@ def main():
             expired_backups = repository.get_expired_backups()
             if expired_backups is not None:
                 for expired_backup in expired_backups:
-                    print("expired:",expired_backup.name)
-                    returncode = subprocess.call(["rm", "-r", "-f", os.path.join(repository.destination,
-                                                                                 expired_backup.name)])
+                    print("expired:", expired_backup.name)
+                    returncode = subprocess.call(
+                        ["rm", "-r", "-f", os.path.join(
+                            repository.destination, expired_backup.name)])
+
                     if returncode == 0:
                         print("backup removed.")
                     else:
@@ -148,14 +163,15 @@ def main():
         time.sleep(wait_seconds)
 
 
-
 class Repository(object):
 
-    def __init__(self, sources, destination, name, intervals, keep, rsyncfilter, rsync_logfile_options):
+    def __init__(self, sources, destination, name, intervals, keep,
+                 rsyncfilter, rsync_logfile_options):
         self.sources = sources
         self.destination = destination
         self.name = name
-        self.intervals = [(interval_name, cron.Cronjob(interval)) for (interval_name, interval) in intervals.items()]
+        self.intervals = [(interval_name, cron.Cronjob(interval)) for
+                          (interval_name, interval) in intervals.items()]
         self.rsync_logfile_options = rsync_logfile_options
 
         self.keep = keep
@@ -180,10 +196,10 @@ class Repository(object):
         if latest_backup is None:
             return self.intervals
 
-        # cron.has_occured_since INCLUDES all occurences of the cronjob in the search
-        # therefore if would match the last backup if it occured EXACTLY at the given
-        # time in the cronjob. ugly fix here: were just add 1 microsecond to the latest
-        # backup
+        # cron.has_occured_since INCLUDES all occurences of the cronjob in the
+        # search. therefore if would match the last backup if it occured
+        # EXACTLY at the given time in the cronjob. ugly fix here: were just
+        # add 1 microsecond to the latest backup
 
         latest_backup_date = latest_backup.date
         latest_backup_date += datetime.timedelta(microseconds=1)
@@ -198,7 +214,6 @@ class Repository(object):
             return None
         return necessary_backups
 
-
     def get_backup_params(self, new_backup_interval_name):
         new_sources = self.sources
         new_destination = self.destination
@@ -206,30 +221,34 @@ class Repository(object):
         new_link_ref = self._get_latest_backup()
         new_link_ref = new_link_ref.name if new_link_ref is not None else None
         new_folder = "%s_%s_%s%s" % (new_name, new_backup_interval_name,
-                                     datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
-        return (new_sources, new_destination, new_folder, new_link_ref, new_name, self.rsyncfilter,
-                self.rsync_logfile_options)
-
+                                     datetime.datetime.now().strftime(
+                                         "%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
+        return (new_sources, new_destination, new_folder, new_link_ref,
+                new_name, self.rsyncfilter, self.rsync_logfile_options)
 
     def get_expired_backups(self):
-        # we will sort the folders and just loop from oldest to newest until we have enough
-        # expired backups.
+        # we will sort the folders and just loop from oldest to newest until we
+        # have enough expired backups.
         result = []
         for interval in self.intervals:
             interval_name = interval[0]
 
             if interval_name not in self.keep:
-                print("No corresponding interval found for keep value %s" % interval_name)
+                print("No corresponding interval found for keep value %s" %
+                      interval_name)
                 sys.exit(9)
 
-            backups_of_that_interval = list(filter(lambda backup: backup.interval_name == interval_name, self.backups))
+            backups_of_that_interval = list(filter(
+                lambda backup: backup.interval_name == interval_name,
+                self.backups))
 
             count = len(backups_of_that_interval) - self.keep[interval_name]
 
             if count <= 0:
                 continue
 
-            backups_of_that_interval.sort(key=lambda backup: backup.date, reverse=False)
+            backups_of_that_interval.sort(key=lambda backup: backup.date,
+                                          reverse=False)
             for i in range(0, count):
                 result.append(backups_of_that_interval[i])
 
@@ -245,6 +264,7 @@ class Repository(object):
             if backup.date > latest.date:
                 latest = backup
         return latest
+
 
 class BackupFolder(object):
 
@@ -269,4 +289,3 @@ class BackupFolder(object):
 
 if __name__ == "__main__":
     main()
-

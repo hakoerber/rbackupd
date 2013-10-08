@@ -1,7 +1,11 @@
 import os
 
+
 class ParseError(Exception):
-    pass
+
+    def __init__(self, line):
+        self.line = line
+
 
 class Config(object):
 
@@ -13,7 +17,7 @@ class Config(object):
         self._parse()
 
     def _read_file(self):
-        if not self._file == None:
+        if self._file is not None:
             return
         if not os.path.isfile(self.path):
             raise IOError("File not found.")
@@ -33,27 +37,32 @@ class Config(object):
         (key, value) = line.split("=")
         key = key.strip()
         value = value.strip()
-        if not (value.startswith('"') or not value.endswith('"')) and not value == "":
-            print('"',value,'"', "is invalid")
-            return False
-        return True
+        if value.isdigit():
+            return True
+        if value == "":
+            return True
+        if value.startswith('"') and value.endswith('"'):
+            return True
+        if value.lower() in ["true", "false", "yes", "no"]:
+            return True
+        raise ParseError(line)
 
     def _parse_section(self, line):
         if not self._is_section(line):
-            raise ParseError()
+            raise ParseError(line)
         return line[1:-1]
 
     def _parse_key_value(self, line):
         if not self._is_key_value(line):
-            raise ParseError()
-        (key_and_tag, value) =  line.split("=")
+            raise ParseError(line)
+        (key_and_tag, value) = line.split("=")
         value = value.strip()
         key_and_tag = key_and_tag.strip()
 
         if "[" in key_and_tag and key_and_tag.endswith("]"):
             (key, tag) = key_and_tag.rstrip("]").split("[")
             if not tag.startswith('"') or not tag.endswith('"'):
-                raise ParseError()
+                raise ParseError(line)
             tag = tag[1:-1]
         else:
             tag = None
@@ -85,8 +94,8 @@ class Config(object):
                 section[1] = {}
                 self._structure.append(section)
             elif self._is_key_value(line):
-                if section == None:
-                    raise ParseError()
+                if section is None:
+                    raise ParseError(line)
                 (key, tag, value) = self._parse_key_value(line)
                 if tag is None:
                     if not key in section[1]:
@@ -99,7 +108,7 @@ class Config(object):
                     else:
                         section[1][key][tag] = value
             else:
-                raise ParseError()
+                raise ParseError(line)
 
     def get_structure(self):
         return self._structure
@@ -111,13 +120,13 @@ class Config(object):
         return None
 
     def get_sections(self, name):
-       sections = []
-       for section in self._structure:
-           if section[0] == name:
-               sections.append(section[1])
-       if len(sections) == 0:
-           return None
-       return sections
+        sections = []
+        for section in self._structure:
+            if section[0] == name:
+                sections.append(section[1])
+        if len(sections) == 0:
+            return None
+        return sections
 
 if __name__ == "__main__":
     import sys
