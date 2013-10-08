@@ -1,0 +1,72 @@
+This file contains source code style recommendations (hopefully) used in all
+source files of this project.
+References:
+Style guide for python code: http://www.python.org/dev/peps/pep-0008/
+Docstring conventions: http://www.python.org/dev/peps/pep-0257/
+
+General
+- one indentation level is either four spaces or one tab, spaces are preferred
+- lines are to be limited to 79 characters
+- top level functions, methods and classes should be separated by two blank
+  lines
+- don't put multiple statements on one line
+- use brackets when operator priorities are unclear
+
+Imports
+- one import per line
+- group imports in the following order:
+    1. standard library imports
+    2. third party imports
+    3. local imports
+- "from ... import ..." should be avoided as it obfuscates the origin of the
+  used functions/classes. An exception are modules that only contain one class
+  with the same name as the module, so "from host import Host" is ok
+
+Comments
+- comments should not describe WHAT you are doing, but WHY you are doing what
+  you are doing and why do do it that way
+
+Docstrings
+- use """ instead of ''', and r"""...""" if you use backslashes in the
+  docstring
+- docstrings should be used for all public modules, functions, classes and
+  methods
+- Use
+  """<docstring>"""
+  for one line docstrings,
+  """
+  <docstring>
+  """
+  for multi line docstrings.
+- Use the following templates in your docstrings to make them usable with
+  sphinx:
+    :param <parameter name>: <parameter description>
+    :type <parameter name>: <type of the parameter>
+    :returns: <return value description>
+    :rtype: <type of the return value>
+    :raises <exception>: <exception cause>
+
+Naming:
+- modules and packages: short and all-lowercase
+- classes: CamelCase
+- exceptions: same as classes, but with a following "Error"
+- functions and global variables: lowercase with underscores
+- parameters: first parameter should be "self" for instance methods and "cls"
+  for class methods
+- use a preceding underscore for every non-public elements of a module or
+  class, things that should not be used outside the module/class, e.g. because
+  they could interfere with data integrity or change in later versions
+- use two preceding underscores for everything that should not be inherited to
+  subclasses, as it invokes name mangling
+
+Miscellaneous:
+- use "is" to compare to singletons, not "=="
+- NOTE TO SELF: "if x" does not mean "if x is not None" !!!
+- when implementing comparison operators, you have to consider:
+    > __eq__ and __ne__ must not exist without the other
+    > __lt__, __le__, __gt__, __ge__ must all be implemented together, and
+      __eq__ and __ne__ have to be present, too
+- never use "except" without a specific exception class to catch
+- the try-block should be as short as possible
+- use isinstance() for comparing types, not the type() method
+- don't compare booleans values to True or False

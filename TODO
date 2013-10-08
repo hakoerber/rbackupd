@@ -1,3 +1,1 @@
-quoting for additional rsync arguments?
-
-compare-dest and link-dest (real inc/diff vs snapshotting)
+check quoting for additional rsync arguments
