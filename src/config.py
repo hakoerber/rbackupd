@@ -97,7 +97,7 @@ class Config(object):
                     if not key in section[1]:
                         section[1][key] = {tag: value}
                     else:
-                        section[1][key].append({tag: value})
+                        section[1][key][tag] = value
             else:
                 raise ParseError()
 
