@@ -15,6 +15,11 @@ Thanks to rsync, rbackupd will preserve hard links, special files such as named
 sockets and fifos, device files, permissions, ownership, modification times,
 ACLs and extended attributes.
 
+As the snapshots are neither compressed nor encrypted by rbackupd, every user
+can access all files owned by him without requiring root privileges.
+
+rbackupd is written in python, for version 3.3.
+
 Requirements
 ------------
 
