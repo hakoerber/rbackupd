@@ -43,16 +43,12 @@ CONF_KEY_INTERVAL = "interval"
 CONF_KEY_KEEP = "keep"
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("invalid arguments")
-        sys.exit(EXIT_INVALID_COMMANDLINE)
-    path_config = sys.argv[1]
-    if not os.path.isfile(path_config):
+def run(config_file):
+    if not os.path.isfile(config_file):
         print("config file not found")
         sys.exit(EXIT_CONFIG_FILE_NOT_FOUND)
 
-    conf = config.Config(path_config)
+    conf = config.Config(config_file)
 
     # this is the [rsync] section
     conf_section_rsync = conf.get_section(CONF_SECTION_RSYNC)
@@ -424,7 +420,3 @@ class BackupFolder(object):
     @property
     def name(self):
         return self._name
-
-
-if __name__ == "__main__":
-    main()
