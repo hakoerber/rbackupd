@@ -225,7 +225,6 @@ def main():
                                                  new_backup.link_ref)
                     destination = os.path.join(new_backup.destination,
                                                new_backup.folder)
-                    print("rsyncing")
                     (returncode, stdoutdata, stderrdata) = rsync.rsync(
                         conf_rsync_cmd,
                         source,
@@ -234,9 +233,9 @@ def main():
                         new_backup.rsync_args,
                         new_backup.rsyncfilter,
                         new_backup.rsync_logfile_options)
-                    print("rsync exited with code %s\n\nstdout:\n%s\n\n"
-                          "stderr:\n%s\n" % (returncode, str(stdoutdata),
-                                             str(stderrdata)))
+                    #print("rsync exited with code %s\n\nstdout:\n%s\n\n"
+                    #      "stderr:\n%s\n" % (returncode, str(stdoutdata),
+                    #                         str(stderrdata)))
                     if returncode != 0:
                         print("rsync FAILED. aborting")
                         sys.exit(EXIT_RSYNC_FAILED)
@@ -245,9 +244,10 @@ def main():
             if len(expired_backups) > 0:
                 for expired_backup in expired_backups:
                     print("expired:", expired_backup.name)
-                    returncode = subprocess.call(
-                        ["rm", "-r", "-f", os.path.join(
-                            repository.destination, expired_backup.name)])
+                    args = ["rm", "-r", "-f", os.path.join(
+                        repository.destination, expired_backup.name)]
+                    print(" ".join(args))
+                    returncode = subprocess.call(args)
 
                     if returncode == 0:
                         print("backup removed.")
@@ -323,9 +323,10 @@ class Repository(object):
     def get_backup_params(self, new_backup_interval_name):
         new_link_ref = self._get_latest_backup()
         new_link_ref = new_link_ref.name if new_link_ref is not None else None
-        new_folder = "%s_%s_%s%s" % (self.name, new_backup_interval_name,
+        new_folder = "%s_%s_%s%s" % (self.name,
                                      datetime.datetime.now().strftime(
-                                         "%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
+                                         "%Y-%m-%dT%H:%M:%S"),
+                                     new_backup_interval_name, BACKUP_SUFFIX)
 
         backup_params = BackupParameters(self.sources,
                                          self.destination,
@@ -390,7 +391,6 @@ class Repository(object):
         return latest
 
 
-
 class BackupParameters(object):
 
     def __init__(self, sources, destination, folder, link_ref,
@@ -411,14 +411,15 @@ class BackupFolder(object):
 
     @property
     def date(self):
-        datestring = self.name.split("_")[2]
-        datestring = datestring[:datestring.find(BACKUP_SUFFIX)]
+        datestring = self.name.split("_")[1]
         date = datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S")
         return date
 
     @property
     def interval_name(self):
-        return self.name.split("_")[1]
+        intervalstring = self.name.split("_")[2]
+        intervalstring = intervalstring[:intervalstring.find(BACKUP_SUFFIX)]
+        return intervalstring
 
     @property
     def name(self):
