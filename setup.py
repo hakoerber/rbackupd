@@ -18,8 +18,8 @@ setup(
 
       package_dir = {'rbackupd': 'src'},
       packages = ['rbackupd'],
-      scripts = [],
-      data_files = [],
+      scripts = ['scripts/rbackupd'],
+      data_files = [('/etc/rbackupd/', ['conf/rbackupd.conf'])],
       requires = [],
 
       classifiers = [
