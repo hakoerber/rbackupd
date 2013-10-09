@@ -21,6 +21,27 @@ EXIT_RSYNC_FAILED = 8
 
 DEFAULT_RSYNC_CMD = "rsync"
 
+CONF_SECTION_DEFAULT = "default"
+CONF_SECTION_RSYNC = "rsync"
+CONF_KEY_RSYNC_CMD = "cmd"
+CONF_KEY_RSYNC_LOGFILE = "rsync_logfile"
+CONF_KEY_RSYNC_LOGFILE_NAME = "rsync_logfile_name"
+CONF_KEY_RSYNC_LOGFILE_FORMAT = "rsync_logfile_format"
+CONF_KEY_FILTER_PATTERNS = "filter"
+CONF_KEY_INCLUDE_PATTERNS = "include"
+CONF_KEY_EXCLUDE_PATTERNS = "exclude"
+CONF_KEY_INCLUDE_FILE = "includefile"
+CONF_KEY_EXCLUDE_FILE = "excludefile"
+CONF_KEY_CREATE_DESTINATION = "create_destination"
+CONF_KEY_ONE_FILESYSTEM = "one_fs"
+CONF_KEY_RSYNC_ARGS = "rsync_args"
+CONF_SECTION_TASK = "task"
+CONF_KEY_DESTINATION = "destination"
+CONF_KEY_SOURCE = "source"
+CONF_KEY_TASKNAME = "name"
+CONF_KEY_INTERVAL = "interval"
+CONF_KEY_KEEP = "keep"
+
 
 def main():
     if len(sys.argv) != 2:
@@ -34,71 +55,80 @@ def main():
     conf = config.Config(path_config)
 
     # this is the [rsync] section
-    conf_section_rsync = conf.get_section("rsync")
-    conf_rsync_cmd = conf_section_rsync.get("cmd", DEFAULT_RSYNC_CMD)
+    conf_section_rsync = conf.get_section(CONF_SECTION_RSYNC)
+    conf_rsync_cmd = conf_section_rsync.get(CONF_KEY_RSYNC_CMD, "rsync")
 
     # these are the [default] options that can be overwritten in the specific
     # [task] section
-    conf_section_default = conf.get_section("default")
-
-    conf_default_rsync_logfile = conf_section_default.get("rsync_logfile",
-                                                          None)
+    conf_section_default = conf.get_section(CONF_SECTION_DEFAULT)
+    conf_default_rsync_logfile = conf_section_default.get(
+        CONF_KEY_RSYNC_LOGFILE, None)
     conf_default_rsync_logfile_name = conf_section_default.get(
-        "rsync_logfile_name", None)
+        CONF_KEY_RSYNC_LOGFILE_NAME, None)
     conf_default_rsync_logfile_format = conf_section_default.get(
-        "rsync_logfile_format", None)
+        CONF_KEY_RSYNC_LOGFILE_FORMAT, None)
 
-    conf_default_filter_patterns = conf_section_default.get("filter", None)
+    conf_default_filter_patterns = conf_section_default.get(
+        CONF_KEY_FILTER_PATTERNS, None)
 
-    conf_default_include_patterns = conf_section_default.get("include", None)
-    conf_default_exclude_patterns = conf_section_default.get("exclude", None)
+    conf_default_include_patterns = conf_section_default.get(
+        CONF_KEY_INCLUDE_PATTERNS, None)
+    conf_default_exclude_patterns = conf_section_default.get(
+        CONF_KEY_EXCLUDE_PATTERNS, None)
 
-    conf_default_include_files = conf_section_default.get("includefile", None)
-    conf_default_exclude_files = conf_section_default.get("excludefile", None)
+    conf_default_include_files = conf_section_default.get(
+        CONF_KEY_INCLUDE_FILE, None)
+    conf_default_exclude_files = conf_section_default.get(
+        CONF_KEY_EXCLUDE_FILE, None)
 
     conf_default_create_destination = conf_section_default.get(
-        "create_destination", None)
+        CONF_KEY_CREATE_DESTINATION, None)
 
-    conf_default_one_filesystem = conf_section_default.get("one_fs", None)
+    conf_default_one_filesystem = conf_section_default.get(
+        CONF_KEY_ONE_FILESYSTEM, None)
 
-    conf_default_rsync_args = conf_section_default.get("rsync_args", None)
+    conf_default_rsync_args = conf_section_default.get(
+        CONF_KEY_RSYNC_ARGS, None)
 
-    conf_sections_tasks = conf.get_sections("task")
+    conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
 
     repositories = []
     for task in conf_sections_tasks:
         # these are the options given in the specific tasks. if none are given,
         # the default values from the [default] sections will be used.
         conf_rsync_logfile = task.get(
-            "rsync_logfile", conf_default_rsync_logfile)
+            CONF_KEY_RSYNC_LOGFILE, conf_default_rsync_logfile)
         conf_rsync_logfile_name = task.get(
-            "rsync_logfile_name", conf_default_rsync_logfile_name)[0]
+            CONF_KEY_RSYNC_LOGFILE_NAME, conf_default_rsync_logfile_name)[0]
         conf_rsync_logfile_format = task.get(
-            "rsync_logfile_format", conf_default_rsync_logfile_format)[0]
+            CONF_KEY_RSYNC_LOGFILE_FORMAT,
+            conf_default_rsync_logfile_format)[0]
 
-        conf_filter_patterns = task.get("filter", conf_default_filter_patterns)
+        conf_filter_patterns = task.get(
+            CONF_KEY_FILTER_PATTERNS, conf_default_filter_patterns)
 
         conf_include_patterns = task.get(
-            "include", conf_default_include_patterns)
+            CONF_KEY_INCLUDE_PATTERNS, conf_default_include_patterns)
         conf_exclude_patterns = task.get(
-            "exclude", conf_default_exclude_patterns)
+            CONF_KEY_EXCLUDE_PATTERNS, conf_default_exclude_patterns)
 
         conf_include_files = task.get(
-            "includefile", conf_default_include_files)
+            CONF_KEY_INCLUDE_FILE, conf_default_include_files)
         conf_exclude_files = task.get(
-            "excludefile", conf_default_exclude_files)
+            CONF_KEY_EXCLUDE_FILE, conf_default_exclude_files)
 
         conf_create_destination = task.get(
-            "create_destination", conf_default_create_destination)
+            CONF_KEY_CREATE_DESTINATION, conf_default_create_destination)
 
         conf_one_filesystem = task.get(
-            "one_fs", conf_default_one_filesystem)[0]
+            CONF_KEY_ONE_FILESYSTEM, conf_default_one_filesystem)[0]
 
-        conf_rsync_args = task.get("rsync_args", conf_default_rsync_args)
+        conf_rsync_args = task.get(
+            CONF_KEY_RSYNC_ARGS, conf_default_rsync_args)
 
         # these are the options that are not given in the [default] section.
-        conf_destination = task["destination"][0]
-        conf_sources = task["source"]
+        conf_destination = task[CONF_KEY_DESTINATION][0]
+        conf_sources = task[CONF_KEY_SOURCE]
 
         # now we can check the values
         if not os.path.exists(conf_destination):
@@ -153,9 +183,9 @@ def main():
         if conf_one_filesystem:
             conf_rsync_args.append("-x")
 
-        conf_taskname = task["name"][0]
-        conf_task_intervals = task["interval"]
-        conf_task_keeps = task["keep"]
+        conf_taskname = task[CONF_KEY_TASKNAME][0]
+        conf_task_intervals = task[CONF_KEY_INTERVAL]
+        conf_task_keeps = task[CONF_KEY_KEEP]
 
         repositories.append(
             Repository(conf_sources,
