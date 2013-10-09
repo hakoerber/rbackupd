@@ -1,0 +1,3 @@
+include AUTHORS CHANGELOG INSTALL LICENSE README.rst TODO
+recursive-include doc *
+recursive-include conf *.conf
