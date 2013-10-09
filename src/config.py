@@ -114,10 +114,7 @@ class Config(object):
         return self._structure
 
     def get_section(self, name):
-        for section in self._structure:
-            if section[0] == name:
-                return section[1]
-        return None
+        return self.get_sections(name)[0]
 
     def get_sections(self, name):
         sections = []
