@@ -11,9 +11,14 @@ maximum number of backups that should be kept for every interval. Intervals
 can be given in a cron-like format, which means you have great flexibility in
 specifiying these intervals.
 
+Thanks to rsync, rbackupd will preserve hard links, special files such as named
+sockets and fifos, device files, permissions, ownership, modification times,
+ACLs and extended attributes.
+
 Requirements
 ------------
 
+- a POSIX compatible operating system
 - rsync v2.5.7 or later
 - python v3.3 or later
 - a filesystem supporting hardlinks
