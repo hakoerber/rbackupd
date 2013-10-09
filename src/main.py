@@ -258,8 +258,8 @@ def main():
             else:
                 print("no expired backups")
         now = datetime.datetime.now()
-        if now.second == 59:
-            wait_seconds = 1
+        if now.minute == 59:
+            wait_seconds = 60 - now.second
         else:
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
