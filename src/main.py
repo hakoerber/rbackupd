@@ -21,6 +21,7 @@ EXIT_RSYNC_FAILED = 8
 
 DEFAULT_RSYNC_CMD = "rsync"
 
+
 def main():
     if len(sys.argv) != 2:
         print("invalid arguments")
@@ -40,7 +41,8 @@ def main():
     # [task] section
     conf_section_default = conf.get_section("default")
 
-    conf_default_rsync_logfile = conf_section_default.get("rsync_logfile", None)
+    conf_default_rsync_logfile = conf_section_default.get("rsync_logfile",
+                                                          None)
     conf_default_rsync_logfile_name = conf_section_default.get(
         "rsync_logfile_name", None)
     conf_default_rsync_logfile_format = conf_section_default.get(
@@ -337,6 +339,7 @@ class Repository(object):
                 latest = backup
         return latest
 
+
 class BackupParameters(object):
 
     def __init__(self, sources, destination, folder, link_ref,
@@ -347,7 +350,8 @@ class BackupParameters(object):
         self.link_ref = link_ref
         self.rsyncfilter = rsyncfilter
         self.rsync_logfile_options = rsync_logfile_options
-        self.rsync_args  = rsync_args
+        self.rsync_args = rsync_args
+
 
 class BackupFolder(object):
 
