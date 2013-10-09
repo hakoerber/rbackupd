@@ -295,21 +295,24 @@ class Repository(object):
         return [BackupFolder(folder) for folder in os.listdir(directory)]
 
     def get_necessary_backups(self):
-        latest_backup = self._get_latest_backup()
-        if latest_backup is None:
-            return self.intervals
-
-        # cron.has_occured_since INCLUDES all occurences of the cronjob in the
-        # search. therefore if would match the last backup if it occured
-        # EXACTLY at the given time in the cronjob. ugly fix here: were just
-        # add 1 microsecond to the latest backup
-
-        latest_backup_date = latest_backup.date
-        latest_backup_date += datetime.timedelta(microseconds=1)
 
         necessary_backups = []
 
         for (interval_name, interval) in self.intervals:
+            latest_backup = self._get_latest_backup_of_interval(interval_name)
+
+            # if there is no backup of that type present, we have to make one
+            if latest_backup is None:
+                necessary_backups.append((interval_name, interval))
+                continue
+
+            latest_backup_date = latest_backup.date
+            # cron.has_occured_since INCLUDES all occurences of the cronjob in
+            # the search. therefore if would match the last backup if it
+            # occured EXACTLY at the given time in the cronjob. ugly fix here:
+            # were just add 1 microsecond to the latest backup
+            latest_backup_date += datetime.timedelta(microseconds=1)
+
             if interval.has_occured_since(latest_backup_date):
                 necessary_backups.append((interval_name, interval))
 
@@ -372,6 +375,20 @@ class Repository(object):
             if backup.date > latest.date:
                 latest = backup
         return latest
+
+    def _get_latest_backup_of_interval(self, interval):
+        if len(self.backups) == 0:
+            return None
+        latest = None
+        for backup in self.backups:
+            if latest is None and backup.interval_name == interval:
+                latest = backup
+            elif latest is not None:
+                if (backup.interval_name == interval and
+                        backup.date > latest.date):
+                    latest = backup
+        return latest
+
 
 
 class BackupParameters(object):
