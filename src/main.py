@@ -10,138 +10,160 @@ import rsync
 
 BACKUP_SUFFIX = ".snapshot"
 
+EXIT_INVALID_COMMANDLINE = 1
+EXIT_CONFIG_FILE_NOT_FOUND = 2
+EXIT_INCLUDE_FILE_NOT_FOUND = 3
+EXIT_INCLUDE_FILE_INVALID = 4
+EXIT_EXCULDE_FILE_NOT_FOUND = 5
+EXIT_EXCLUDE_FILE_INVALID = 6
+EXIT_RM_FAILED = 7
+EXIT_RSYNC_FAILED = 8
+
+DEFAULT_RSYNC_CMD = "rsync"
 
 def main():
     if len(sys.argv) != 2:
         print("invalid arguments")
-        sys.exit(2)
+        sys.exit(EXIT_INVALID_COMMANDLINE)
     path_config = sys.argv[1]
     if not os.path.isfile(path_config):
         print("config file not found")
-        sys.exit(1)
+        sys.exit(EXIT_CONFIG_FILE_NOT_FOUND)
 
     conf = config.Config(path_config)
 
-    rsync_settings = conf.get_section("rsync")
-    rsync_cmd = rsync_settings.get("cmd", "rsync")
+    # this is the [rsync] section
+    conf_section_rsync = conf.get_section("rsync")
+    conf_rsync_cmd = conf_section_rsync.get("cmd", DEFAULT_RSYNC_CMD)
 
-    conf_default = conf.get_section("default")
+    # these are the [default] options that can be overwritten in the specific
+    # [task] section
+    conf_section_default = conf.get_section("default")
 
-    conf_default_filter_patterns = conf_default.get("filter", None)
-
-    conf_default_include_patterns = conf_default.get("include", None)
-    conf_default_exclude_patterns = conf_default.get("exclude", None)
-
-    conf_default_include_files = conf_default.get("includefile", None)
-    conf_default_exclude_files = conf_default.get("excludefile", None)
-
-    conf_default_rsync_logfile = conf_default.get("rsync_logfile", None)
-    conf_default_rsync_logfile_name = conf_default.get("rsync_logfile_name",
-                                                       None)
-    conf_default_rsync_logfile_format = conf_default.get(
+    conf_default_rsync_logfile = conf_section_default.get("rsync_logfile", None)
+    conf_default_rsync_logfile_name = conf_section_default.get(
+        "rsync_logfile_name", None)
+    conf_default_rsync_logfile_format = conf_section_default.get(
         "rsync_logfile_format", None)
 
-    conf_default_create_destination = conf_default.get("create_destination",
-                                                       None)
+    conf_default_filter_patterns = conf_section_default.get("filter", None)
 
-    conf_default_rsync_args = conf_default.get("rsync_args", None)
-    conf_default_one_filesystem = conf_default.get("one_fs", None)
+    conf_default_include_patterns = conf_section_default.get("include", None)
+    conf_default_exclude_patterns = conf_section_default.get("exclude", None)
+
+    conf_default_include_files = conf_section_default.get("includefile", None)
+    conf_default_exclude_files = conf_section_default.get("excludefile", None)
+
+    conf_default_create_destination = conf_section_default.get(
+        "create_destination", None)
+
+    conf_default_one_filesystem = conf_section_default.get("one_fs", None)
+
+    conf_default_rsync_args = conf_section_default.get("rsync_args", None)
+
+    conf_sections_tasks = conf.get_sections("task")
 
     repositories = []
-    for task in conf.get_sections("task"):
-        destination = task["destination"][0]
-        if not os.path.exists(destination):
-            print("destination not found")
-            sys.exit(3)
-        if not os.path.isdir(destination):
-            print("destination not a directory")
-            sys.exit(2)
-        sources = task["source"]
-        for source in sources:
-            if not os.path.exists(source):
-                print("source not found")
-                sys.exit(4)
+    for task in conf_sections_tasks:
+        # these are the options given in the specific tasks. if none are given,
+        # the default values from the [default] sections will be used.
+        conf_rsync_logfile = task.get(
+            "rsync_logfile", conf_default_rsync_logfile)
+        conf_rsync_logfile_name = task.get(
+            "rsync_logfile_name", conf_default_rsync_logfile_name)[0]
+        conf_rsync_logfile_format = task.get(
+            "rsync_logfile_format", conf_default_rsync_logfile_format)[0]
 
-        rsync_logfile = task.get("rsync_logfile", conf_default_rsync_logfile)
-        rsync_logfile_name = task.get("rsync_logfile_name",
-                                      conf_default_rsync_logfile_name)[0]
-        rsync_logfile_format = task.get("rsync_logfile_format",
-                                        conf_default_rsync_logfile_format)[0]
+        conf_filter_patterns = task.get("filter", conf_default_filter_patterns)
 
-        if rsync_logfile:
-            rsync_logfile_options = rsync.LogfileOptions(rsync_logfile_name,
-                                                         rsync_logfile_format)
-        else:
-            rsync_logfile_options = None
+        conf_include_patterns = task.get(
+            "include", conf_default_include_patterns)
+        conf_exclude_patterns = task.get(
+            "exclude", conf_default_exclude_patterns)
 
-        create_destination = task.get("create_destination",
-                                      conf_default_create_destination)
+        conf_include_files = task.get(
+            "includefile", conf_default_include_files)
+        conf_exclude_files = task.get(
+            "excludefile", conf_default_exclude_files)
 
-        one_filesystem = task.get("one_fs", conf_default_one_filesystem)[0]
+        conf_create_destination = task.get(
+            "create_destination", conf_default_create_destination)
 
-        filter_patterns = task.get("filter", conf_default_filter_patterns)
-
-        include_patterns = task.get("include", conf_default_include_patterns)
-        exclude_patterns = task.get("exclude", conf_default_exclude_patterns)
-
-        include_files = task.get("includefile", conf_default_include_files)
-        exclude_files = task.get("excludefile", conf_default_exclude_files)
+        conf_one_filesystem = task.get(
+            "one_fs", conf_default_one_filesystem)[0]
 
         conf_rsync_args = task.get("rsync_args", conf_default_rsync_args)
 
-        if include_files is not None:
-            for include_file in include_files:
+        # these are the options that are not given in the [default] section.
+        conf_destination = task["destination"][0]
+        conf_sources = task["source"]
+
+        # now we can check the values
+        if not os.path.exists(conf_destination):
+            if not create_destination:
+                print("destination \"%s\" does not exists, will no be "
+                      "created. repository will be skipped." %
+                      conf_destination)
+                continue
+        if not os.path.isdir(conf_destination):
+            print("destination \"%s\" not a directory" % conf_destination)
+            sys.exit(EXIT_INVALID_DESTINATION)
+
+        if conf_include_files is not None:
+            for include_file in conf_include_files:
                 continue
                 if not os.path.exists(include_file):
-                    print("include file not found")
-                    sys.exit(5)
+                    print("include file \"%s\" not found" % include_file)
+                    sys.exit(EXIT_INCLUDE_FILE_NOT_FOUND)
                 elif not os.path.isfile(include_file):
-                    print("include file is not a valid file")
-                    sys.exit(6)
+                    print("include file \"%s\" is not a valid file" %
+                          include_file)
+                    sys.exit(EXIT_INCLUDE_FILE_INVALID)
 
-        if exclude_files is not None:
-            for exclude_file in exclude_files:
+        if conf_exclude_files is not None:
+            for exclude_file in conf_exclude_files:
                 continue
                 if not os.path.exists(exclude_file):
-                    print("exclude file not found")
-                    sys.exit(7)
+                    print("exclude file \"%s\" not found" % exclude_file)
+                    sys.exit(EXIT_EXCULDE_FILE_NOT_FOUND)
                 elif not os.path.isfile(exclude_file):
-                    print("exclude file is not a valid file")
-                    sys.exit(8)
+                    print("exclude file \"%s\" is not a valid file" %
+                          exclude_file)
+                    sys.exit(EXIT_EXCLUDE_FILE_INVALID)
 
-        rsyncfilter = rsync.Filter(include_patterns, exclude_patterns,
-                                   include_files, exclude_files,
-                                   filter_patterns)
+        if conf_rsync_logfile:
+            conf_rsync_logfile_options = rsync.LogfileOptions(
+                conf_rsync_logfile_name, conf_rsync_logfile_format)
+        else:
+            conf_rsync_logfile_options = None
 
-        if not os.path.exists(destination):
-            if not create_destination:
-                print("destination does not exists, will no be created. "
-                      "repository will be skipped.")
-                continue
-        elif not os.path.isdir(destination):
-            print("destination is no a directory, will be skipped.")
-            continue
-
-        if conf_rsync_args is None:
-            print("no rsync arguments specified. skipping repository.")
-            continue
+        conf_rsyncfilter = rsync.Filter(conf_include_patterns,
+                                        conf_exclude_patterns,
+                                        conf_include_files,
+                                        conf_exclude_files,
+                                        conf_filter_patterns)
 
         rsync_args = []
         for arg in conf_rsync_args:
             rsync_args.extend(arg.split())
+        conf_rsync_args = rsync_args
 
-        if one_filesystem:
-            rsync_args.append("-x")
+        if conf_one_filesystem:
+            conf_rsync_args.append("-x")
+
+        conf_taskname = task["name"][0]
+        conf_task_intervals = task["interval"]
+        conf_task_keeps = task["keep"]
 
         repositories.append(
-            Repository(sources,
-                       destination,
-                       task["name"][0],
-                       task["interval"],
-                       task["keep"],
-                       rsyncfilter,
-                       rsync_logfile_options,
-                       rsync_args))
+            Repository(conf_sources,
+                       conf_destination,
+                       conf_taskname,
+                       conf_task_intervals,
+                       conf_task_keeps,
+                       conf_rsyncfilter,
+                       conf_rsync_logfile_options,
+                       conf_rsync_args))
 
     while True:
         for repository in repositories:
@@ -158,24 +180,30 @@ def main():
 
                 new_backup = repository.get_backup_params(
                     new_backup_interval_name)
-                for source in new_backup[0]:
-                    if new_backup[3] is None:
+
+                for source in new_backup.sources:
+                    if new_backup.link_ref is None:
                         link_dest = None
                     else:
-                        link_dest = os.path.join(new_backup[1], new_backup[3])
+                        link_dest = os.path.join(new_backup.destination,
+                                                 new_backup.link_ref)
+                    destination = os.path.join(new_backup.destination,
+                                               new_backup.folder)
                     print("rsyncing")
-                    destination = os.path.join(new_backup[1], new_backup[2])
-                    logfile_options = new_backup[6]
-                    rsync_args = new_backup[7]
                     (returncode, stdoutdata, stderrdata) = rsync.rsync(
-                        rsync_cmd, source, destination, link_dest, rsync_args,
-                        new_backup[5], logfile_options)
+                        conf_rsync_cmd,
+                        source,
+                        destination,
+                        link_dest,
+                        new_backup.rsync_args,
+                        new_backup.rsyncfilter,
+                        new_backup.rsync_logfile_options)
                     print("rsync exited with code %s\n\nstdout:\n%s\n\n"
                           "stderr:\n%s\n" % (returncode, str(stdoutdata),
                                              str(stderrdata)))
                     if returncode != 0:
                         print("rsync FAILED. aborting")
-                        sys.exit(10)
+                        sys.exit(EXIT_RSYNC_FAILED)
 
             expired_backups = repository.get_expired_backups()
             if len(expired_backups) > 0:
@@ -189,7 +217,7 @@ def main():
                         print("backup removed.")
                     else:
                         print("removing the backup failed. aborting.")
-                        sys.exit(11)
+                        sys.exit(EXIT_RM_FAILED)
 
             else:
                 print("no expired backups")
@@ -211,11 +239,10 @@ class Repository(object):
         self.name = name
         self.intervals = [(interval_name, cron.Cronjob(interval)) for
                           (interval_name, interval) in intervals.items()]
-        self.rsync_logfile_options = rsync_logfile_options
-        self.rsync_args = rsync_args
-
         self.keep = keep
         self.rsyncfilter = rsyncfilter
+        self.rsync_logfile_options = rsync_logfile_options
+        self.rsync_args = rsync_args
 
         self._oldfolders = None
         self._backups = self._parse_folders(self.destination)
@@ -255,17 +282,21 @@ class Repository(object):
         return necessary_backups
 
     def get_backup_params(self, new_backup_interval_name):
-        new_sources = self.sources
-        new_destination = self.destination
-        new_name = self.name
         new_link_ref = self._get_latest_backup()
         new_link_ref = new_link_ref.name if new_link_ref is not None else None
-        new_folder = "%s_%s_%s%s" % (new_name, new_backup_interval_name,
+        new_folder = "%s_%s_%s%s" % (self.name, new_backup_interval_name,
                                      datetime.datetime.now().strftime(
                                          "%Y-%m-%dT%H:%M:%S"), BACKUP_SUFFIX)
-        return (new_sources, new_destination, new_folder, new_link_ref,
-                new_name, self.rsyncfilter, self.rsync_logfile_options,
-                self.rsync_args)
+
+        backup_params = BackupParameters(self.sources,
+                                         self.destination,
+                                         new_folder,
+                                         new_link_ref,
+                                         self.rsyncfilter,
+                                         self.rsync_logfile_options,
+                                         self.rsync_args)
+
+        return backup_params
 
     def get_expired_backups(self):
         # we will sort the folders and just loop from oldest to newest until we
@@ -306,6 +337,17 @@ class Repository(object):
                 latest = backup
         return latest
 
+class BackupParameters(object):
+
+    def __init__(self, sources, destination, folder, link_ref,
+                 rsyncfilter, rsync_logfile_options, rsync_args):
+        self.sources = sources
+        self.destination = destination
+        self.folder = folder
+        self.link_ref = link_ref
+        self.rsyncfilter = rsyncfilter
+        self.rsync_logfile_options = rsync_logfile_options
+        self.rsync_args  = rsync_args
 
 class BackupFolder(object):
 
