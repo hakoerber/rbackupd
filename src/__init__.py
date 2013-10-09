@@ -1,12 +1,15 @@
+all = ["config"]
+
 import datetime
 import os
 import subprocess
 import sys
 import time
 
-import config
-import cron
-import rsync
+from . import config
+from . import cron
+from . import rsync
+
 
 BACKUP_SUFFIX = ".snapshot"
 
@@ -420,3 +423,6 @@ class BackupFolder(object):
     @property
     def name(self):
         return self._name
+
+if __name__ == '__main__':
+    run(sys.argv[1])
