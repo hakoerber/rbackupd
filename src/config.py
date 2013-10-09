@@ -1,4 +1,5 @@
 import os
+import collections
 
 
 class ParseError(Exception):
@@ -91,7 +92,7 @@ class Config(object):
             elif self._is_section(line):
                 section = [None, None]
                 section[0] = self._parse_section(line)
-                section[1] = {}
+                section[1] = collections.OrderedDict()
                 self._structure.append(section)
             elif self._is_key_value(line):
                 if section is None:
@@ -104,7 +105,7 @@ class Config(object):
                         section[1][key].append(value)
                 else:
                     if not key in section[1]:
-                        section[1][key] = {tag: value}
+                        section[1][key] = collections.OrderedDict({tag: value})
                     else:
                         section[1][key][tag] = value
             else:

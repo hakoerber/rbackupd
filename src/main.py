@@ -204,11 +204,15 @@ def main():
                 print("no backup necessary")
             else:
                 new_backup_interval_name = None
+                exitloop = False
                 for (name, _) in repository.intervals:
                     for (backup_name, _) in necessary_backups:
                         if name == backup_name:
                             new_backup_interval_name = name
+                            exitloop = True
                             break
+                    if exitloop:
+                        break
 
                 new_backup = repository.get_backup_params(
                     new_backup_interval_name)
