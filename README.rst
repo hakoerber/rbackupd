@@ -23,6 +23,11 @@ Requirements
 - python v3.3 or later
 - a filesystem supporting hardlinks
 
+Usage
+-----
+
+``rbackupd <configuration file>``
+
 Documentation
 -------------
 
