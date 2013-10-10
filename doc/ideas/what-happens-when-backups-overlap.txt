@@ -1,0 +1,31 @@
+What happens when backups overlap?
+
+It may happend that multiple backups are necessary at the same time. For
+example, the the first backup of the day is both a hourly (0 * * * * *) and a
+daily (0 0 * * * *) backup.
+
+You can control the behaviour for rbackupd in this case with the "overlapping"
+option in the configuration file. Possible values are "hardlink" and "single".
+
+- "single" means that only one backup will be made. The priority is determined
+  by the order of the "interval" keys in the specific task sections. The
+  higest scheduled interval will take precedence. In the case above, when
+  the daily interval is set before the hourly interval in the configuration
+  file, only a daily backup will be created. Note however that the hourly
+  backup will be made in the next polling.
+
+- "hardlink" means that multiple backups will be created. Technically, only one
+  backup will be made, and the remaining necessary backups will be an exact
+  copy of that backup, with files being hardlinked together. This will require
+  more time and space, but the result will be more consistent.
+
+- "symlink" means that one backup will be made, and all other necessary backups
+  will be created as a symlink to that directory. While the creation of
+  symlinks is very inexpensive, it raises some issues when deleting backups. If
+  a backup should be deleted and is a symlink, we can just delete the symlink.
+  If it is not, we have to look through all other backups and determine whether
+  any of those are symlinks to the backup that should be deleted. We then have
+  move the backup over one of those symlinks, and update all remaining symlinks
+  to point at the new location. This makes the whole process more complex, but
+  does neither impact time consumption of new backups nor does it make the
+  backup history inconsistent.
