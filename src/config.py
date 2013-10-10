@@ -35,7 +35,7 @@ class Config(object):
             return False
         if not "=" in line[1:]:
             return False
-        (key, value) = line.split("=")
+        (key, _, value) = line.partition("=")
         key = key.strip()
         value = value.strip()
         if value.isdigit():
@@ -56,7 +56,7 @@ class Config(object):
     def _parse_key_value(self, line):
         if not self._is_key_value(line):
             raise ParseError(line)
-        (key_and_tag, value) = line.split("=")
+        (key_and_tag, _, value) = line.partition("=")
         value = value.strip()
         key_and_tag = key_and_tag.strip()
 
