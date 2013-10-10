@@ -16,7 +16,8 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     if loggingOptions is not None:
         args.append("--log-file=%s" % os.path.join(destination,
                                                    loggingOptions.log_name))
-        args.append("--log-file-format=%s" % loggingOptions.log_format)
+        if loggingOptions.log_format is not None:
+            args.append("--log-file-format=%s" % loggingOptions.log_format)
 
     args.append(source)
     args.append(destination)
