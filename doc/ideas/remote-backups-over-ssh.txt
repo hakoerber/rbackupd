@@ -1,0 +1,32 @@
+[default]
+ssh_args = "-p 22"
+*or*
+ssh_args =
+
+Support ssh connections. The overridable key ssh_args is directly passed to
+rsync after the -e options, e.g. the above would lead to
+
+    rsync -e "ssh -p 22" ...
+
+rbackupd does not support interactive authentification through passwords, so
+public-key-authentification has to be set up beforehand.
+
+When "ssh_args" is left blank, only
+
+    -e "ssh"
+
+will passed to rsync.
+
+When using ssh, you can use the usual ssh syntax for rsync arguments, as
+described in rsync(1):
+
+    [[USER@]HOST:]SRC DEST
+    SRC [[USER@]HOST:]DEST
+
+Note that you can specify different machines in every source key, as a separate
+rsync command will be issued for every source. When you ommit the USER, the
+current username will be used to connect to the remote host.
+
+If you do set the key (maybe inplicitly in the [default] section) but do not
+use the ssh syntax for source or destination, the arguments will be passed
+anyway, but are insigificant.

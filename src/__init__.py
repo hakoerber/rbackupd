@@ -38,6 +38,7 @@ CONF_KEY_EXCLUDE_FILE = "excludefile"
 CONF_KEY_CREATE_DESTINATION = "create_destination"
 CONF_KEY_ONE_FILESYSTEM = "one_fs"
 CONF_KEY_RSYNC_ARGS = "rsync_args"
+CONF_KEY_SSH_ARGS = "ssh_args"
 CONF_SECTION_TASK = "task"
 CONF_KEY_DESTINATION = "destination"
 CONF_KEY_SOURCE = "source"
@@ -89,6 +90,9 @@ def run(config_file):
     conf_default_rsync_args = conf_section_default.get(
         CONF_KEY_RSYNC_ARGS, None)
 
+    conf_default_ssh_args = conf_section_default.get(
+        CONF_KEY_SSH_ARGS, None)
+
     conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
 
     repositories = []
@@ -124,6 +128,9 @@ def run(config_file):
 
         conf_rsync_args = task.get(
             CONF_KEY_RSYNC_ARGS, conf_default_rsync_args)
+
+        conf_ssh_args = task.get(
+            CONF_KEY_SSH_ARGS, conf_default_ssh_args)
 
         # these are the options that are not given in the [default] section.
         conf_destination = task[CONF_KEY_DESTINATION][0]
@@ -181,6 +188,13 @@ def run(config_file):
 
         if conf_one_filesystem:
             conf_rsync_args.append("-x")
+
+        ssh_args = []
+        if conf_ssh_args is not None:
+            ssh_args = ["--rsh"]
+            for args in conf_ssh_args:
+                ssh_args.append(args)
+        conf_rsync_args.extend(ssh_args)
 
         conf_taskname = task[CONF_KEY_TASKNAME][0]
         conf_task_intervals = task[CONF_KEY_INTERVAL]
