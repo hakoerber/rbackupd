@@ -1,11 +1,13 @@
 What happens when backups overlap?
 
-It may happend that multiple backups are necessary at the same time. For
+It may happen that multiple backups are necessary at the same time. For
 example, the the first backup of the day is both a hourly (0 * * * * *) and a
 daily (0 0 * * * *) backup.
 
 You can control the behaviour for rbackupd in this case with the "overlapping"
-option in the configuration file. Possible values are "hardlink" and "single".
+option in the [default] section of the configuration file that is overridable
+in the specific [task] sections. Possible values are "hardlink", "single" and
+"symlink":
 
 - "single" means that only one backup will be made. The priority is determined
   by the order of the "interval" keys in the specific task sections. The
@@ -29,3 +31,6 @@ option in the configuration file. Possible values are "hardlink" and "single".
   to point at the new location. This makes the whole process more complex, but
   does neither impact time consumption of new backups nor does it make the
   backup history inconsistent.
+
+We should make sure that all backups created at the same time have the same
+timestamp.
