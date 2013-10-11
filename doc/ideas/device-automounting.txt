@@ -1,0 +1,34 @@
+[mount]
+
+name = "external-hdd"
+
+device = "/dev/sda"
+*or* device = LABEL="ext-hdd"
+*or* device = "UUID=abcde-fdfdf"
+
+mountpoint = "/root/backup"
+mountpoint_ro = "/mnt/backup"
+*or* mountpoint_ro =
+
+mountpoint_create = false
+mountpoint_ro_create = true
+
+
+Specify various [mount] sections where devices and corresponding mountpoints
+can be specified.
+
+Each [mount] section specifies a device, either by path, label or UUID, and
+the keys mountpoint and mountpoint_ro. The latter can be empty.
+
+When starting rbackupd, it mounts the devices in every [mount] section on both
+mountpoints "mountpoint_{rw,ro}" if necessary. "mountpoint" is required,
+this is the point rbackupd writes to. It should be somewhere where not user
+(except root of course) has access to, e.g. /root/. "mountpoint_ro" can be
+omitted, if not, this is the point where the device will be mounted readonly.
+You can use this to expose the backups to all users without giving them write
+access.
+
+the corresponding options "mountpoint_{rw,ro}_create specify whether a missing
+mountpoint should be created. "mountpoint_create" has to be present,
+"mountpoint_ro_create" is only necessary if "mountpoint_ro" is set, it is
+ignored if superfluous.

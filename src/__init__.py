@@ -1,5 +1,3 @@
-all = ["config"]
-
 import datetime
 import os
 import subprocess
@@ -8,6 +6,7 @@ import time
 
 from . import config
 from . import cron
+from . import filesystem
 from . import rsync
 
 
@@ -25,9 +24,19 @@ EXIT_CONFIG_FILE_INVALID = 9
 
 DEFAULT_RSYNC_CMD = "rsync"
 
-CONF_SECTION_DEFAULT = "default"
 CONF_SECTION_RSYNC = "rsync"
 CONF_KEY_RSYNC_CMD = "cmd"
+
+CONF_SECTION_MOUNT = "mount"
+CONF_KEY_DEVICE = "device"
+CONF_KEY_MOUNTPOINT = "mountpoint"
+CONF_KEY_MOUNTPOINT_RO = "mountpoint_ro"
+CONF_KEY_MOUNTPOINT_OPTIONS = "mountpoint_options"
+CONF_KEY_MOUNTPOINT_RO_OPTIONS = "mountpoint_options"
+CONF_KEY_MOUNTPOINT_CREATE = "mountpoint_create"
+CONF_KEY_MOUNTPOINT_RO_CREATE = "mountpoint_ro_create"
+
+CONF_SECTION_DEFAULT = "default"
 CONF_KEY_RSYNC_LOGFILE = "rsync_logfile"
 CONF_KEY_RSYNC_LOGFILE_NAME = "rsync_logfile_name"
 CONF_KEY_RSYNC_LOGFILE_FORMAT = "rsync_logfile_format"
@@ -41,6 +50,7 @@ CONF_KEY_ONE_FILESYSTEM = "one_fs"
 CONF_KEY_RSYNC_ARGS = "rsync_args"
 CONF_KEY_SSH_ARGS = "ssh_args"
 CONF_KEY_OVERLAPPING = "overlapping"
+
 CONF_SECTION_TASK = "task"
 CONF_KEY_DESTINATION = "destination"
 CONF_KEY_SOURCE = "source"
@@ -59,6 +69,8 @@ def run(config_file):
     # this is the [rsync] section
     conf_section_rsync = conf.get_section(CONF_SECTION_RSYNC)
     conf_rsync_cmd = conf_section_rsync.get(CONF_KEY_RSYNC_CMD, "rsync")
+
+    conf_sections_mounts = conf.get_sections(CONF_SECTION_MOUNT)
 
     # these are the [default] options that can be overwritten in the specific
     # [task] section
@@ -99,6 +111,78 @@ def run(config_file):
         CONF_KEY_OVERLAPPING, None)
 
     conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
+
+    for mount in conf_sections_mounts:
+        conf_device = mount[CONF_KEY_DEVICE][0]
+        conf_mountpoint = mount[CONF_KEY_MOUNTPOINT][0]
+        conf_mountpoint_ro = mount.get(CONF_KEY_MOUNTPOINT_RO, [None])[0]
+        conf_mountpoint_options = mount.get(
+            CONF_KEY_MOUNTPOINT_OPTIONS, [None])[0]
+        conf_mountpoint_ro_options = mount.get(
+            CONF_KEY_MOUNTPOINT_RO_OPTIONS, [None])[0]
+
+        if conf_mountpoint_options is None:
+            conf_mountpoint_options = ['rw']
+        else:
+            conf_mountpoint_options = conf_mountpoint_options.split(',')
+            conf_mountpoint_options.append('rw')
+
+        if conf_mountpoint_ro_options is None:
+            conf_mountpoint_ro_options = ['ro']
+        else:
+            conf_mountpoint_ro_options = conf_mountpoint_ro_options.split(',')
+            conf_mountpoint_ro_options.append('ro')
+
+        conf_mountpoint_create = mount[CONF_KEY_MOUNTPOINT_CREATE][0]
+
+        conf_mountpoint_ro_create = mount.get(CONF_KEY_MOUNTPOINT_RO_CREATE,
+                                              [None])[0]
+        if (conf_mountpoint_ro is not None and
+                conf_mountpoint_ro_create is None):
+            print("mountpoint_ro_create needed")
+            sys.exit(EXIT_INVALID_CONFIG)
+
+        if (conf_mountpoint_ro is not None and conf_mountpoint_ro_create and
+                not os.path.exists(conf_mountpoint_ro)):
+            os.mkdir(conf_mountpoint_ro)
+        if not os.path.exists(conf_mountpoint_ro):
+            print("mountpoint_ro does not exist")
+            sys.exit()
+        if conf_mountpoint_create and not os.path.exists(conf_mountpoint):
+            os.mkdir(conf_mountpoint)
+        if not os.path.exists(conf_mountpoint):
+            print("mountpoint does not exist")
+            sys.exit()
+
+        if conf_device.startswith('UUID'):
+            uuid = conf_device.split('=')[1]
+            device_identifier = filesystem.DeviceIdentifier(uuid=uuid)
+        elif conf_device.startswith('LABEL'):
+            label = conf_device.split('=')[1]
+            device_identifier = filesystem.DeviceIdentifier(label=label)
+        else:
+            device_identifier = filesystem.DeviceIdentifier(path=conf_device)
+
+        print(device_identifier.get())
+        device = filesystem.Device(device_identifier, filesystem="auto")
+
+        mountpoint = filesystem.Mountpoint(
+            path=conf_mountpoint,
+            options=conf_mountpoint_options)
+        # How to get two mounts of the same device with different rw/ro:
+        # mount readonly
+        # bind readonly to the writeable mountpoint without altering rw/ro
+        # remount writeable mountpoint with rw
+        if conf_mountpoint_ro is not None:
+            mountpoint_ro = filesystem.Mountpoint(
+                path=conf_mountpoint_ro,
+                options=conf_mountpoint_ro_options)
+            device.mount(mountpoint_ro)
+
+            mountpoint_ro.bind(mountpoint)
+            mountpoint.remount(("rw", "relatime", "noexec", "nosuid"))
+        else:
+            device.mount(mountpoint)
 
     repositories = []
     for task in conf_sections_tasks:
