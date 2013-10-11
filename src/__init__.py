@@ -21,6 +21,7 @@ EXIT_EXCULDE_FILE_NOT_FOUND = 5
 EXIT_EXCLUDE_FILE_INVALID = 6
 EXIT_RM_FAILED = 7
 EXIT_RSYNC_FAILED = 8
+EXIT_CONFIG_FILE_INVALID = 9
 
 DEFAULT_RSYNC_CMD = "rsync"
 
@@ -222,120 +223,10 @@ def run(config_file):
 
     while True:
         for repository in repositories:
-            necessary_backups = repository.get_necessary_backups()
-            if necessary_backups is not None:
+            create_backups_if_necessary(repository, conf_overlapping,
+                                        conf_rsync_cmd)
+            handle_expired_backups(repository)
 
-                if conf_overlapping == "single":
-                    new_backup_interval_name = None
-                    exitloop = False
-                    for (name, _) in repository.intervals:
-                        for (backup_name, _) in necessary_backups:
-                            if name == backup_name:
-                                new_backup_interval_name = name
-                                exitloop = True
-                                break
-                        if exitloop:
-                            break
-                    new_backup = repository.get_backup_params(
-                        new_backup_interval_name)
-                    create_backup(new_backup, conf_rsync_cmd)
-
-                else:
-                    # Make one "real" backup and just hard/symlink all others
-                    # to this one
-                    real_backup = repository.get_backup_params(
-                        necessary_backups[0][0])
-                    create_backup(real_backup, conf_rsync_cmd)
-                    for backup in necessary_backups[1:]:
-                        backup = repository.get_backup_params(backup[0])
-                        # real_backup.destination and backup.destination are
-                        # guaranteed to be identical as they are from the same
-                        # repository
-                        source = os.path.join(real_backup.destination,
-                                              real_backup.folder)
-                        destination = os.path.join(real_backup.destination,
-                                                   backup.folder)
-                        if conf_overlapping == "hardlink":
-                            # we could alternatively use rsync with destination
-                            # being the same as link-dest, this would create
-                            # only hardlinks, too
-                            args = ["cp", "-a", "-l", source, destination]
-                        elif conf_overlapping == "symlink":
-                            # We should create RELATIVE symlinks with "-r", as
-                            # the repository might move, but the relative
-                            # location of all backups will stay the same
-                            args = ["ln", "-s", "-r", source, destination]
-                        else:
-                            # panic and run away
-                            print("invalid value for overlapping")
-                            sys.exit(50)
-
-                        subprocess.check_call(args)
-
-            else:
-                print("no backup necessary")
-
-            expired_backups = repository.get_expired_backups()
-            if len(expired_backups) > 0:
-                for expired_backup in expired_backups:
-                    # as a backup might be a symlink to another backup, we have
-                    # to consider: when it is a symlink, just remove the
-                    # symlink. if not, other backupSSS!! might be a symlink to
-                    # it, so we have to check all other backups. we overwrite
-                    # one symlink with the backup and update all remaining
-                    # symlinks
-                    print("expired:", expired_backup.name)
-                    expired_path = os.path.join(repository.destination,
-                                                expired_backup.name)
-                    if os.path.islink(expired_path):
-                        # to remove a symlink, we have to strip the trailing
-                        # slash from the path
-                        args = ["rm", expired_path.rstrip("/")]
-                        subprocess.check_call(args)
-                    else:
-                        symlinks = []
-                        for backup in repository.backups:
-                            backup_path = os.path.join(repository.destination,
-                                                       backup.name)
-                            if (os.path.samefile(expired_path,
-                                                 os.path.realpath(backup_path))
-                                    and os.path.islink(backup_path)):
-                                symlinks.append(backup)
-
-                        if len(symlinks) == 0:
-                            # just remove the backups, no symlinks present
-                            args = ["rm", "-r", "-f", os.path.join(
-                                repository.destination, expired_backup.name)]
-                            subprocess.check_call(args)
-                        else:
-                            # replace the first symlink with the backup
-                            symlink_path = os.path.join(repository.destination,
-                                                        symlinks[0].name)
-                            # again, strip the trailing slash to remove the
-                            # symlink
-                            args = ["rm", symlink_path.rstrip("/")]
-                            subprocess.check_call(args)
-
-                            # move the real backup over
-                            args = ["mv", expired_path, symlink_path]
-
-                            # now update all symlinks to the directory
-                            for remaining_symlink in symlinks[1:]:
-                                remaining_symlink_path = os.path.join(
-                                    Repository.destination,
-                                    remaining_symlink.name)
-
-                                # remove trailing slash to remove symlink
-                                args = ["rm", remaining_symlink.rstrip("/")]
-                                subprocess.check_call(args)
-
-                                # create new, correct symlink
-                                args = ["ln", "-s", "-r", expired_path,
-                                        remaining_symlink_path]
-                                subprocess.check_call(args)
-
-            else:
-                print("no expired backups")
         now = datetime.datetime.now()
         if now.minute == 59:
             wait_seconds = 60 - now.second
@@ -343,6 +234,51 @@ def run(config_file):
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
         time.sleep(wait_seconds)
+
+
+def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
+    necessary_backups = repository.get_necessary_backups()
+    if necessary_backups is not None:
+        if conf_overlapping == "single":
+            new_backup_interval_name = None
+            exitloop = False
+            for (name, _) in repository.intervals:
+                for (backup_name, _) in necessary_backups:
+                    if name == backup_name:
+                        new_backup_interval_name = name
+                        exitloop = True
+                        break
+                if exitloop:
+                    break
+            new_backup = repository.get_backup_params(new_backup_interval_name)
+            create_backup(new_backup, conf_rsync_cmd)
+
+        else:
+            # Make one "real" backup and just hard/symlink all others to this
+            # one
+            real_backup = repository.get_backup_params(necessary_backups[0][0])
+            create_backup(real_backup, conf_rsync_cmd)
+            for backup in necessary_backups[1:]:
+                backup = repository.get_backup_params(backup[0])
+                # real_backup.destination and backup.destination are guaranteed
+                # to be identical as they are from the same repository
+                source = os.path.join(real_backup.destination,
+                                      real_backup.folder)
+                destination = os.path.join(real_backup.destination,
+                                           backup.folder)
+                if conf_overlapping == "hardlink":
+                    copy_hardlinks(source, destination)
+                elif conf_overlapping == "symlink":
+                    # We should create RELATIVE symlinks with "-r", as the
+                    # repository might move, but the relative location of all
+                    # backups will stay the same
+                    create_symlink(source, destination)
+                else:
+                    # panic and run away
+                    print("invalid value for overlapping")
+                    sys.exit(EXIT_CONFIG_FILE_INVALID)
+    else:
+        print("no backup necessary")
 
 
 def create_backup(new_backup, rsync_cmd):
@@ -362,12 +298,87 @@ def create_backup(new_backup, rsync_cmd):
             new_backup.rsync_args,
             new_backup.rsyncfilter,
             new_backup.rsync_logfile_options)
-        #print("rsync exited with code %s\n\nstdout:\n%s\n\n"
-        #      "stderr:\n%s\n" % (returncode, str(stdoutdata),
-        #                         str(stderrdata)))
         if returncode != 0:
             print("rsync FAILED. aborting")
             sys.exit(EXIT_RSYNC_FAILED)
+
+
+def handle_expired_backups(repository):
+    expired_backups = repository.get_expired_backups()
+    if len(expired_backups) > 0:
+        for expired_backup in expired_backups:
+            # as a backup might be a symlink to another backup, we have to
+            # consider: when it is a symlink, just remove the symlink. if not,
+            # other backupSSS!! might be a symlink to it, so we have to check
+            # all other backups. we overwrite one symlink with the backup and
+            # update all remaining symlinks
+            print("expired:", expired_backup.name)
+            expired_path = os.path.join(repository.destination,
+                                        expired_backup.name)
+            if os.path.islink(expired_path):
+                remove_symlink(expired_path)
+            else:
+                symlinks = []
+                for backup in repository.backups:
+                    backup_path = os.path.join(repository.destination,
+                                               backup.name)
+                    if (os.path.samefile(expired_path,
+                                         os.path.realpath(backup_path))
+                            and os.path.islink(backup_path)):
+                        symlinks.append(backup)
+
+                if len(symlinks) == 0:
+                    # just remove the backups, no symlinks present
+                    remove_recursive(os.path.join(
+                        repository.destination, expired_backup.name))
+                else:
+                    # replace the first symlink with the backup
+                    symlink_path = os.path.join(repository.destination,
+                                                symlinks[0].name)
+                    remove_symlink(symlink_path)
+
+                    # move the real backup over
+                    move(expired_path, symlink_path)
+
+                    # now update all symlinks to the directory
+                    for remaining_symlink in symlinks[1:]:
+                        remaining_symlink_path = os.path.join(
+                            Repository.destination,
+                            remaining_symlink.name)
+                        remove_symlink(remaining_symlink)
+                        create_symlink(expired_path, remaining_symlink_path)
+    else:
+        print("no expired backups")
+
+
+def remove_symlink(path):
+    # to remove a symlink, we have to strip the trailing
+    # slash from the path
+    args = ["rm", expired_path.rstrip("/")]
+    subprocess.check_call(args)
+
+
+def create_symlink(path, target):
+    args = ["ln", "-s", "-r", path, target],
+    subprocess.check_call(args)
+
+
+def move(path, target):
+    args = ["mv", path, target]
+    subprocess.check_call(args)
+
+
+def remove_recursive(path):
+    args = ["rm", "-r", "-f", path]
+    subprocess.check_call(args)
+
+
+def copy_hardlinks(path, target):
+    # we could alternatively use rsync with destination
+    # being the same as link-dest, this would create
+    # only hardlinks, too
+    args = ["cp", "-a", "-l", path, target]
+    subprocess.check_call(args)
 
 
 class Repository(object):
