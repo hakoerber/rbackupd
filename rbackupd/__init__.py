@@ -225,7 +225,7 @@ def run(config_file):
 
         conf_ssh_args = task.get(
             CONF_KEY_SSH_ARGS, conf_default_ssh_args)
-        conf_ssh_args.insert(0, SSH_CMD)
+        conf_ssh_args = SSH_CMD + " " + " ".join(conf_ssh_args)
 
         conf_overlapping = task.get(
             CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
@@ -292,9 +292,7 @@ def run(config_file):
 
         ssh_args = []
         if conf_ssh_args is not None:
-            ssh_args = ["--rsh"]
-            for args in conf_ssh_args:
-                ssh_args.append(args)
+            ssh_args = ["--rsh", conf_ssh_args]
         conf_rsync_args.extend(ssh_args)
 
         conf_taskname = task[CONF_KEY_TASKNAME][0]
