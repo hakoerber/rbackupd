@@ -443,7 +443,8 @@ def remove_symlink(path):
 
 
 def create_symlink(path, target):
-    args = ["ln", "-s", "-r", path, target],
+    args = ["ln", "-s", "-r", path, target]
+    print(args)
     subprocess.check_call(args)
 
 
