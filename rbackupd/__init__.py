@@ -389,6 +389,7 @@ def create_backup(new_backup, rsync_cmd):
             new_backup.rsyncfilter,
             new_backup.rsync_logfile_options)
         if returncode != 0:
+            print(stderrdata)
             print("rsync FAILED. aborting")
             sys.exit(EXIT_RSYNC_FAILED)
 
