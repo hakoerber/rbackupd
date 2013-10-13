@@ -12,6 +12,8 @@ from . import rsync
 
 BACKUP_SUFFIX = ".snapshot"
 
+SSH_CMD = "ssh"
+
 EXIT_INVALID_COMMANDLINE = 1
 EXIT_CONFIG_FILE_NOT_FOUND = 2
 EXIT_INCLUDE_FILE_NOT_FOUND = 3
@@ -220,6 +222,7 @@ def run(config_file):
 
         conf_ssh_args = task.get(
             CONF_KEY_SSH_ARGS, conf_default_ssh_args)
+        conf_ssh_args.insert(0, SSH_CMD)
 
         conf_overlapping = task.get(
             CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
