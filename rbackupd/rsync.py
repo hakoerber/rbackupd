@@ -53,29 +53,29 @@ class Filter(object):
 
     def get_args(self):
         args = []
+        for rfilter in self.filters:
+            if rfilter == "" or rfilter is None:
+                continue
+            args.extend["--filter", rfilter]
+
         for pattern in self.include_patterns:
             if pattern == "" or pattern is None:
                 continue
-            args.append("--include=%s" % pattern)
-
-        for pattern in self.exclude_patterns:
-            if pattern == "" or pattern is None:
-                continue
-            args.append("--exclude=%s" % pattern)
+            args.extend(["--include", pattern])
 
         for patternfile in self.include_files:
             if patternfile == "" or patternfile is None:
                 continue
-            args.append("--include-from=%s" % pattern)
+            args.extend(["--include-from", pattern])
+
+        for pattern in self.exclude_patterns:
+            if pattern == "" or pattern is None:
+                continue
+            args.extend(["--exclude", pattern])
 
         for patternfile in self.exclude_files:
             if patternfile == "" or patternfile is None:
                 continue
-            args.append("--exclude-from=%s" % pattern)
-
-        for rfilter in self.filters:
-            if rfilter == "" or rfilter is None:
-                continue
-            args.append("--filter=%s" % rfilter)
+            args.extend(["--exclude-from", pattern])
 
         return args
