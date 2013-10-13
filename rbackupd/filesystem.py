@@ -113,6 +113,9 @@ class Mountpoint(object):
         :returns: A new mountpoint instance that represents the binding
         mountpoint
         """
+        if os.path.ismount(target.path):
+            print("%s is an active mountpoint, no binding" % target.path)
+            return
         args = ["mount",
                 "--bind",
                 self.path,
@@ -122,4 +125,3 @@ class Mountpoint(object):
         except subprocess.CalledProcessError as err:
             print(err.output)
             raise
-        return Mountpoint(target, self.options)
