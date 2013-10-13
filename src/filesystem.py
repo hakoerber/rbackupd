@@ -49,6 +49,9 @@ class Device(object):
         at.
         :type mountpoint: Mountpoint instance
         """
+        if os.path.ismount(mountpoint.path):
+            print("%s is already a mountpoint" % mountpoint.path)
+            return
         identifier = self.device_identifier.get()
         if identifier[0] == DeviceIdentifiers.UUID:
             device_args = ["-U", identifier[1]]
