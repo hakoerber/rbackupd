@@ -625,17 +625,19 @@ class BackupFolder(object):
     def __init__(self, name):
         self._name = name
 
+        datestring = self.name.split("_")[1]
+        self._date = datetime.datetime.strptime(datestring,
+                                                "%Y-%m-%dT%H:%M:%S")
+        intervalstring = self.name.split("_")[2]
+        self._interval = intervalstring[:intervalstring.find(BACKUP_SUFFIX)]
+
     @property
     def date(self):
-        datestring = self.name.split("_")[1]
-        date = datetime.datetime.strptime(datestring, "%Y-%m-%dT%H:%M:%S")
-        return date
+        return self._date
 
     @property
     def interval_name(self):
-        intervalstring = self.name.split("_")[2]
-        intervalstring = intervalstring[:intervalstring.find(BACKUP_SUFFIX)]
-        return intervalstring
+        return self._interval
 
     @property
     def name(self):
