@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import subprocess
 import sys
 import time
@@ -11,6 +12,8 @@ from . import rsync
 
 
 BACKUP_SUFFIX = ".snapshot"
+
+BACKUP_REGEX = re.compile('^.*_.*_.*\.snapshot$')
 
 SSH_CMD = "ssh"
 
@@ -469,6 +472,14 @@ def copy_hardlinks(path, target):
     subprocess.check_call(args)
 
 
+def is_backup_folder(name):
+    if BACKUP_REGEX.match(name):
+        return True
+    else:
+        print("%s is not a backup folder" % name)
+        return False
+
+
 class Repository(object):
 
     def __init__(self, sources, destination, name, intervals, keep,
@@ -483,8 +494,8 @@ class Repository(object):
         self.rsync_logfile_options = rsync_logfile_options
         self.rsync_args = rsync_args
 
-        self._oldfolders = None
-        self._backups = self._parse_folders(self.destination)
+        self._oldfolders = os.listdir(self.destination)
+        self._backups = self._parse_folders(self._oldfolders)
 
     @property
     def backups(self):
@@ -494,8 +505,9 @@ class Repository(object):
             self._oldfolders = folders
         return self._backups
 
-    def _parse_folders(self, directory):
-        return [BackupFolder(folder) for folder in os.listdir(directory)]
+    def _parse_folders(self, folders):
+        return [BackupFolder(folder) for folder in folders
+                if is_backup_folder(folder)]
 
     def get_necessary_backups(self):
 
