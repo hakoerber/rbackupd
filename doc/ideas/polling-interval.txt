@@ -1,0 +1,5 @@
+The polling interval should depend on the "shortest" backup interval. For
+example, when you want to backup every minute (what you most likely don't), the
+polling interval must be one minute at maximum. In contrast, when you only
+backup every hour, this is not necessary, as polling hourly would suffice. The
+easiest way to go would to offer an option in the configuration file.
