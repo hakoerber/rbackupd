@@ -500,7 +500,7 @@ class Repository(object):
     def backups(self):
         folders = os.listdir(self.destination)
         if folders != self._oldfolders:
-            self._backups = self._parse_folders(self.destination)
+            self._backups = self._parse_folders(folders)
             self._oldfolders = folders
         return self._backups
 
