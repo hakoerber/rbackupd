@@ -118,6 +118,9 @@ def run(config_file):
     conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
 
     for mount in conf_sections_mounts:
+        if len(mount) == 0:
+            continue
+
         conf_device = mount[CONF_KEY_DEVICE][0]
         conf_mountpoint = mount[CONF_KEY_MOUNTPOINT][0]
         conf_mountpoint_ro = mount.get(CONF_KEY_MOUNTPOINT_RO, [None])[0]
