@@ -5,6 +5,7 @@ import collections
 class ParseError(Exception):
 
     def __init__(self, line):
+        super(ParseError, self).__init__(line)
         self.line = line
 
 

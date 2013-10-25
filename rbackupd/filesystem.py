@@ -66,7 +66,7 @@ class Device(object):
         args.append(mountpoint.path)
         try:
             subprocess.check_output(args)
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError:
             raise
 
 

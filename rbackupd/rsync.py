@@ -56,7 +56,7 @@ class Filter(object):
         for rfilter in self.filters:
             if rfilter == "" or rfilter is None:
                 continue
-            args.extend["--filter", rfilter]
+            args.extend(["--filter", rfilter])
 
         for pattern in self.include_patterns:
             if pattern == "" or pattern is None:

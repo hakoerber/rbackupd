@@ -253,7 +253,6 @@ def run(config_file):
 
         if conf_include_files is not None:
             for include_file in conf_include_files:
-                continue
                 if not os.path.exists(include_file):
                     print("include file \"%s\" not found" % include_file)
                     sys.exit(EXIT_INCLUDE_FILE_NOT_FOUND)
@@ -264,7 +263,6 @@ def run(config_file):
 
         if conf_exclude_files is not None:
             for exclude_file in conf_exclude_files:
-                continue
                 if not os.path.exists(exclude_file):
                     print("exclude file \"%s\" not found" % exclude_file)
                     sys.exit(EXIT_EXCULDE_FILE_NOT_FOUND)
@@ -435,7 +433,7 @@ def handle_expired_backups(repository):
                     # now update all symlinks to the directory
                     for remaining_symlink in symlinks[1:]:
                         remaining_symlink_path = os.path.join(
-                            Repository.destination,
+                            repository.destination,
                             remaining_symlink.name)
                         remove_symlink(remaining_symlink)
                         create_symlink(expired_path, remaining_symlink_path)
@@ -446,7 +444,7 @@ def handle_expired_backups(repository):
 def remove_symlink(path):
     # to remove a symlink, we have to strip the trailing
     # slash from the path
-    args = ["rm", expired_path.rstrip("/")]
+    args = ["rm", path.rstrip("/")]
     subprocess.check_call(args)
 
 
@@ -567,9 +565,8 @@ class Repository(object):
                       interval_name)
                 sys.exit(9)
 
-            backups_of_that_interval = list(filter(
-                lambda backup: backup.interval_name == interval_name,
-                self.backups))
+            backups_of_that_interval = [backup for backup in self.backups if
+                backup.interval_name == interval_name]
 
             count = len(backups_of_that_interval) - self.keep[interval_name]
 
