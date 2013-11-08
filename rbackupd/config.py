@@ -83,8 +83,8 @@ class Config(object):
 
     def _is_valid(self, line):
         return (self._is_comment(line) or
-            self._is_section(line) or
-            self._is_key_value(line))
+                self._is_section(line) or
+                self._is_key_value(line))
 
     def _is_empty(self, line):
         return len(line) == 0

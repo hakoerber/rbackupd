@@ -575,7 +575,7 @@ class Repository(object):
                 sys.exit(9)
 
             backups_of_that_interval = [backup for backup in self.backups if
-                backup.interval_name == interval_name]
+                                        backup.interval_name == interval_name]
 
             count = len(backups_of_that_interval) - self.keep[interval_name]
 
