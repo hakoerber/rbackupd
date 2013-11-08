@@ -13,7 +13,7 @@ from . import rsync
 
 BACKUP_SUFFIX = ".snapshot"
 
-BACKUP_REGEX = re.compile('^.*_.*_.*\.snapshot$')
+BACKUP_REGEX = re.compile(r'r^.*_.*_.*\.snapshot$')
 
 SSH_CMD = "ssh"
 
@@ -26,6 +26,9 @@ EXIT_EXCLUDE_FILE_INVALID = 6
 EXIT_RM_FAILED = 7
 EXIT_RSYNC_FAILED = 8
 EXIT_CONFIG_FILE_INVALID = 9
+EXIT_INVALID_DESTINATION = 10
+EXIT_INVALID_CONFIG_FILE = 11
+EXIT_NO_MOUNTPOINT_CREATE = 12
 
 DEFAULT_RSYNC_CMD = "rsync"
 
@@ -66,8 +69,12 @@ CONF_KEY_KEEP = "keep"
 
 def run(config_file):
     if not os.path.isfile(config_file):
-        print("config file not found")
-        sys.exit(EXIT_CONFIG_FILE_NOT_FOUND)
+        if not os.path.exists(config_file):
+            print("config file not found")
+            sys.exit(EXIT_CONFIG_FILE_NOT_FOUND)
+        else:
+            print("invalid config file")
+            sys.exit(EXIT_INVALID_CONFIG_FILE)
 
     conf = config.Config(config_file)
 
@@ -148,7 +155,7 @@ def run(config_file):
         if (conf_mountpoint_ro is not None and
                 conf_mountpoint_ro_create is None):
             print("mountpoint_ro_create needed")
-            sys.exit(EXIT_INVALID_CONFIG)
+            sys.exit(EXIT_NO_MOUNTPOINT_CREATE)
 
         if (conf_mountpoint_ro is not None and conf_mountpoint_ro_create and
                 not os.path.exists(conf_mountpoint_ro)):
@@ -241,15 +248,17 @@ def run(config_file):
             print("invalid value for \"overlapping\": %s" % conf_overlapping)
 
         # now we can check the values
-        if not os.path.exists(conf_destination):
-            if not create_destination:
-                print("destination \"%s\" does not exists, will no be "
-                      "created. repository will be skipped." %
-                      conf_destination)
-                continue
-        if not os.path.isdir(conf_destination):
-            print("destination \"%s\" not a directory" % conf_destination)
-            sys.exit(EXIT_INVALID_DESTINATION)
+        # if destination is remote, we skip checking create_destination
+        if not is_remote_path(conf_destination):
+            if not os.path.exists(conf_destination):
+                if not conf_create_destination:
+                    print("destination \"%s\" does not exists, will no be "
+                          "created. repository will be skipped." %
+                          conf_destination)
+                    continue
+            if not os.path.isdir(conf_destination):
+                print("destination \"%s\" not a directory" % conf_destination)
+                sys.exit(EXIT_INVALID_DESTINATION)
 
         if conf_include_files is not None:
             for include_file in conf_include_files:

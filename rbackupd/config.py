@@ -82,33 +82,41 @@ class Config(object):
         return (key, tag, value)
 
     def _is_valid(self, line):
-        return _is_comment(line) or _is_section(line) or _is_key_value(line)
+        return (self._is_comment(line) or
+            self._is_section(line) or
+            self._is_key_value(line))
+
+    def _is_empty(self, line):
+        return len(line) == 0
 
     def _parse(self):
         section = None
+        lineno = 0
         for line in self._file:
+            lineno += 1
             line = line.strip()
-            if len(line) == 0 or self._is_comment(line):
+            if self._is_empty(line) or self._is_comment(line):
                 continue
             elif self._is_section(line):
-                section = [None, None]
-                section[0] = self._parse_section(line)
-                section[1] = collections.OrderedDict()
-                self._structure.append(section)
+                current_section = [None, None]
+                current_section[0] = self._parse_section(line)
+                current_section[1] = collections.OrderedDict()
+                self._structure.append(current_section)
             elif self._is_key_value(line):
-                if section is None:
+                if current_section is None:
                     raise ParseError(line)
                 (key, tag, value) = self._parse_key_value(line)
                 if tag is None:
-                    if not key in section[1]:
-                        section[1][key] = [value]
+                    if not key in current_section[1]:
+                        current_section[1][key] = [value]
                     else:
-                        section[1][key].append(value)
+                        current_section[1][key].append(value)
                 else:
-                    if not key in section[1]:
-                        section[1][key] = collections.OrderedDict({tag: value})
+                    if not key in current_section[1]:
+                        current_section[1][key] = collections.OrderedDict(
+                            {tag: value})
                     else:
-                        section[1][key][tag] = value
+                        current_section[1][key][tag] = value
             else:
                 raise ParseError(line)
 
@@ -126,11 +134,3 @@ class Config(object):
         if len(sections) == 0:
             return None
         return sections
-
-if __name__ == "__main__":
-    import sys
-    config = Config(sys.argv[1])
-    #print(config.get_structure())
-    #print(config.get_section("noexist"))
-    #print(config.get_section("main"))
-    #print(config.get_sections("task"))
