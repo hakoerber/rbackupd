@@ -66,7 +66,7 @@ class Filter(object):
         for patternfile in self.include_files:
             if patternfile == "" or patternfile is None:
                 continue
-            args.extend(["--include-from", pattern])
+            args.extend(["--include-from", patternfile])
 
         for pattern in self.exclude_patterns:
             if pattern == "" or pattern is None:
@@ -76,6 +76,6 @@ class Filter(object):
         for patternfile in self.exclude_files:
             if patternfile == "" or patternfile is None:
                 continue
-            args.extend(["--exclude-from", pattern])
+            args.extend(["--exclude-from", patternfile])
 
         return args
