@@ -262,6 +262,7 @@ def _set_lower_value(schedule, latest_schedule, i):
                     if val < last_value]
     if len(lower_values) == 0:
         _set_lower_value(schedule, latest_schedule, i)
+        return
     latest_schedule[i] = max(lower_values)
 
 
