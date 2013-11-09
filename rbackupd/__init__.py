@@ -356,10 +356,11 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
         else:
             # Make one "real" backup and just hard/symlink all others to this
             # one
-            real_backup = repository.get_backup_params(necessary_backups[0][0])
+            timestamp = datetime.datetime.now()
+            real_backup = repository.get_backup_params(necessary_backups[0][0], timestamp=timestamp)
             create_backup(real_backup, conf_rsync_cmd)
             for backup in necessary_backups[1:]:
-                backup = repository.get_backup_params(backup[0])
+                backup = repository.get_backup_params(backup[0], timestamp)
                 # real_backup.destination and backup.destination are guaranteed
                 # to be identical as they are from the same repository
                 source = os.path.join(real_backup.destination,
@@ -546,11 +547,13 @@ class Repository(object):
             return None
         return necessary_backups
 
-    def get_backup_params(self, new_backup_interval_name):
+    def get_backup_params(self, new_backup_interval_name, timestamp=None):
+        if timestamp is None:
+            timestamp = datetime.datetime.now()
         new_link_ref = self._get_latest_backup()
         new_link_ref = new_link_ref.name if new_link_ref is not None else None
         new_folder = "%s_%s_%s%s" % (self.name,
-                                     datetime.datetime.now().strftime(
+                                     timestamp.strftime(
                                          "%Y-%m-%dT%H:%M:%S"),
                                      new_backup_interval_name, BACKUP_SUFFIX)
 
