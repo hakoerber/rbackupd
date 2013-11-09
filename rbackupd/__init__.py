@@ -13,7 +13,7 @@ from . import rsync
 
 BACKUP_SUFFIX = ".snapshot"
 
-BACKUP_REGEX = re.compile(r'r^.*_.*_.*\.snapshot$')
+BACKUP_REGEX = re.compile(r'^.*_.*_.*\.snapshot$')
 
 SSH_CMD = "ssh"
 
