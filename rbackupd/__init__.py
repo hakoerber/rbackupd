@@ -248,20 +248,20 @@ def run(config_file):
             print("invalid value for \"overlapping\": %s" % conf_overlapping)
 
         # now we can check the values
-        # if destination is remote, we skip checking create_destination
-        if not is_remote_path(conf_destination):
-            if not os.path.exists(conf_destination):
-                if not conf_create_destination:
-                    print("destination \"%s\" does not exists, will no be "
-                          "created. repository will be skipped." %
-                          conf_destination)
-                    continue
-            if not os.path.isdir(conf_destination):
-                print("destination \"%s\" not a directory" % conf_destination)
-                sys.exit(EXIT_INVALID_DESTINATION)
+        if not os.path.exists(conf_destination):
+            if not conf_create_destination:
+                print("destination \"%s\" does not exists, will no be "
+                        "created. repository will be skipped." %
+                        conf_destination)
+                continue
+        if not os.path.isdir(conf_destination):
+            print("destination \"%s\" not a directory" % conf_destination)
+            sys.exit(EXIT_INVALID_DESTINATION)
 
         if conf_include_files is not None:
             for include_file in conf_include_files:
+                if include_file is None:
+                    continue
                 if not os.path.exists(include_file):
                     print("include file \"%s\" not found" % include_file)
                     sys.exit(EXIT_INCLUDE_FILE_NOT_FOUND)
@@ -272,6 +272,8 @@ def run(config_file):
 
         if conf_exclude_files is not None:
             for exclude_file in conf_exclude_files:
+                if exclude_file is None:
+                    continue
                 if not os.path.exists(exclude_file):
                     print("exclude file \"%s\" not found" % exclude_file)
                     sys.exit(EXIT_EXCULDE_FILE_NOT_FOUND)
