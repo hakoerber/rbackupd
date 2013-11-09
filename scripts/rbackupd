@@ -2,7 +2,10 @@
 
 import optparse
 import sys
+import os
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                ".."))
 import rbackupd
 
 DEFAULT_PATH_CONFIG = "/etc/rbackupd/rbackupd.conf"
@@ -20,14 +23,13 @@ def main():
                       default=DEFAULT_PATH_CONFIG,
                       action="store",
                       help="alternative configuration file [default: %s]" %
-                          DEFAULT_PATH_CONFIG
+                           DEFAULT_PATH_CONFIG
                       )
 
     (options, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("no arguments expected")
-
     rbackupd.run(options.path_config)
 
 if __name__ == "__main__":
