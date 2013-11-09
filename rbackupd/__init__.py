@@ -251,8 +251,8 @@ def run(config_file):
         if not os.path.exists(conf_destination):
             if not conf_create_destination:
                 print("destination \"%s\" does not exists, will no be "
-                        "created. repository will be skipped." %
-                        conf_destination)
+                      "created. repository will be skipped." %
+                      conf_destination)
                 continue
         if not os.path.isdir(conf_destination):
             print("destination \"%s\" not a directory" % conf_destination)
@@ -357,7 +357,8 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
             # Make one "real" backup and just hard/symlink all others to this
             # one
             timestamp = datetime.datetime.now()
-            real_backup = repository.get_backup_params(necessary_backups[0][0], timestamp=timestamp)
+            real_backup = repository.get_backup_params(necessary_backups[0][0],
+                                                       timestamp=timestamp)
             create_backup(real_backup, conf_rsync_cmd)
             for backup in necessary_backups[1:]:
                 backup = repository.get_backup_params(backup[0], timestamp)
