@@ -90,7 +90,7 @@ class Config(object):
         return len(line) == 0
 
     def _parse(self):
-        section = None
+        current_section = None
         lineno = 0
         for line in self._file:
             lineno += 1
