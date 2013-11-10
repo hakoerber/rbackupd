@@ -30,6 +30,8 @@ EXIT_INVALID_DESTINATION = 10
 EXIT_INVALID_CONFIG_FILE = 11
 EXIT_NO_MOUNTPOINT_CREATE = 12
 
+SYMLINK_LATEST_NAME = "latest"
+
 DEFAULT_RSYNC_CMD = "rsync"
 
 CONF_SECTION_RSYNC = "rsync"
@@ -384,14 +386,15 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
 
 
 def create_backup(new_backup, rsync_cmd):
+    destination = os.path.join(new_backup.destination,
+                               new_backup.folder)
+    symlink_latest = os.path.join(new_backup.destination, SYMLINK_LATEST_NAME)
     for source in new_backup.sources:
         if new_backup.link_ref is None:
             link_dest = None
         else:
             link_dest = os.path.join(new_backup.destination,
                                      new_backup.link_ref)
-        destination = os.path.join(new_backup.destination,
-                                   new_backup.folder)
         (returncode, stdoutdata, stderrdata) = rsync.rsync(
             rsync_cmd,
             source,
@@ -404,6 +407,9 @@ def create_backup(new_backup, rsync_cmd):
             print(stderrdata)
             print("rsync FAILED. aborting")
             sys.exit(EXIT_RSYNC_FAILED)
+    if os.path.islink(symlink_latest):
+        remove_symlink(symlink_latest)
+    create_symlink(destination, symlink_latest)
 
 
 def handle_expired_backups(repository):
@@ -448,8 +454,8 @@ def handle_expired_backups(repository):
                         remaining_symlink_path = os.path.join(
                             repository.destination,
                             remaining_symlink.name)
-                        remove_symlink(remaining_symlink)
-                        create_symlink(expired_path, remaining_symlink_path)
+                        remove_symlink(remaining_symlink_path)
+                        create_symlink(symlink_path, remaining_symlink_path)
     else:
         print("no expired backups")
 
@@ -461,9 +467,8 @@ def remove_symlink(path):
     subprocess.check_call(args)
 
 
-def create_symlink(path, target):
-    args = ["ln", "-s", "-r", path, target]
-    print(args)
+def create_symlink(target, linkname):
+    args = ["ln", "-s", "-r", target, linkname]
     subprocess.check_call(args)
 
 
