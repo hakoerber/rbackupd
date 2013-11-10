@@ -1,0 +1,10 @@
+When using rsync over ssh, the following problem arises: We have to somehow
+check the destination folders to create the "backup repository". So a standalone
+ssh connection would be necessary. Instead, we could use sshfs to mount the
+remote folder into the local filesystem, so we can perform all actions locally
+on that mountpoint. Backdraw: We cannot do any checks about the remote folders
+(whether they exist for example) without the standalone ssh connection mentioned
+before, so one would be necessary anyway. But the procedure would be a lot
+cleaner, as we could do the checks over the connection, terminate it, and then
+use sshfs. This way, we could later extend the procedure and do remote mounting
+for example, but be done with it before actually doing the backup.
