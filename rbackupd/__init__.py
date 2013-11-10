@@ -454,8 +454,8 @@ def handle_expired_backups(repository):
                         remaining_symlink_path = os.path.join(
                             repository.destination,
                             remaining_symlink.name)
-                        remove_symlink(remaining_symlink)
-                        create_symlink(expired_path, remaining_symlink_path)
+                        remove_symlink(remaining_symlink_path)
+                        create_symlink(symlink_path, remaining_symlink_path)
     else:
         print("no expired backups")
 
