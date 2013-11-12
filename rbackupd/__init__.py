@@ -331,11 +331,14 @@ def run(config_file):
                        conf_rsync_args))
 
     while True:
+        start = datetime.datetime.now()
         for repository in repositories:
             create_backups_if_necessary(repository, conf_overlapping,
                                         conf_rsync_cmd)
-            handle_expired_backups(repository)
+            handle_expired_backups(repository, start)
 
+        # we have to get the current time again, as the above might take a lot
+        # of time
         now = datetime.datetime.now()
         if now.minute == 59:
             wait_seconds = 60 - now.second
@@ -437,8 +440,8 @@ def create_backup(new_backup, rsync_cmd):
     create_symlink(destination, symlink_latest)
 
 
-def handle_expired_backups(repository):
-    expired_backups = repository.get_expired_backups()
+def handle_expired_backups(repository, current_time):
+    expired_backups = repository.get_expired_backups(current_time)
     if len(expired_backups) > 0:
         for expired_backup in expired_backups:
             # as a backup might be a symlink to another backup, we have to
@@ -599,7 +602,7 @@ class Repository(object):
 
         return backup_params
 
-    def get_expired_backups(self):
+    def get_expired_backups(self, current_time):
         # we will sort the folders and just loop from oldest to newest until we
         # have enough expired backups.
         result = []
@@ -630,7 +633,7 @@ class Repository(object):
                 result.append(backups_of_that_interval[i])
 
             for backup in backups_of_that_interval:
-                age = datetime.datetime.now() - backup.date
+                age = current_time - backup.date
                 if age > self.keep_age[interval]:
                     if backup not in result:
                         result.append(backup)
