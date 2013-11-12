@@ -11,7 +11,7 @@ maximum number of backups that should be kept for every interval. Intervals
 can be given in a cron-like format, which means you have great flexibility in
 specifiying these intervals.
 
-Thanks to rsync, rbackupd will preserve hard links, special files such as named
+Thanks to rsync, rbackupd will preserve hardlinks, special files such as named
 sockets and fifos, device files, permissions, ownership, modification times,
 ACLs and extended attributes.
 
@@ -51,7 +51,7 @@ See ``AUTHORS`` for a list of authors.
 Changelog
 ---------
 
-See ``CHANGELOG`` for a complete changelog.
+See ``CHANGES.rst`` for a complete changelog.
 
 License
 -------
