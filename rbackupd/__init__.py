@@ -126,6 +126,9 @@ def run(config_file):
 
     conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
 
+    if conf_sections_mounts is None:
+        conf_sections_mounts = []
+
     for mount in conf_sections_mounts:
         if len(mount) == 0:
             continue
