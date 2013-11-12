@@ -31,33 +31,33 @@ Requirements
 Usage
 -----
 
-``rbackupd <configuration file>``
+``rbackupd [-c <configuration file>]``
 
 Documentation
 -------------
 
-Look into doc/ for more detailed documentation.
+Look into ``doc/`` for more detailed documentation.
 
 Installation
 ------------
 
-See INSTALL for installation information.
+See ``INSTALL`` for installation information.
 
 Authors
 -------
 
-See AUTHORS for a list of authors.
+See ``AUTHORS`` for a list of authors.
 
 Changelog
 ---------
 
-See CHANGELOG for a complete changelog.
+See ``CHANGELOG`` for a complete changelog.
 
 License
 -------
 
 rbackupd is licensed under the GNU General Public License version 3. See
-LICENSE for a copy of the GPL.
+``LICENSE`` for a copy of the GPL.
 
 Contact
 -------
