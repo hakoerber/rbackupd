@@ -67,6 +67,7 @@ CONF_KEY_SOURCE = "source"
 CONF_KEY_TASKNAME = "name"
 CONF_KEY_INTERVAL = "interval"
 CONF_KEY_KEEP = "keep"
+CONF_KEY_KEEP_AGE = "keep_age"
 
 
 def run(config_file):
@@ -312,6 +313,11 @@ def run(config_file):
         conf_taskname = task[CONF_KEY_TASKNAME][0]
         conf_task_intervals = task[CONF_KEY_INTERVAL]
         conf_task_keeps = task[CONF_KEY_KEEP]
+        conf_task_keep_ages = task[CONF_KEY_KEEP_AGE]
+
+        for i in conf_task_keep_ages.keys():
+            conf_task_keep_ages[i] = \
+                _interval_to_timedelta(conf_task_keep_ages[i])
 
         repositories.append(
             Repository(conf_sources,
@@ -319,6 +325,7 @@ def run(config_file):
                        conf_taskname,
                        conf_task_intervals,
                        conf_task_keeps,
+                       conf_task_keep_ages,
                        conf_rsyncfilter,
                        conf_rsync_logfile_options,
                        conf_rsync_args))
@@ -336,6 +343,24 @@ def run(config_file):
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
         time.sleep(wait_seconds)
+
+
+def _interval_to_timedelta(interval):
+    timedelta = None
+    suffix = interval[-1:]
+    value = int(interval[:-1])
+    if suffix == "m":
+        timedelta = datetime.timedelta(minutes=value)
+    elif suffix == "h":
+        timedelta = datetime.timedelta(hours=value)
+    elif suffix == "w":
+        timedelta = datetime.timedelta(weeks=value)
+    elif suffix == "d":
+        timedelta = datetime.timedelta(days=value)
+    else:
+        print("Invalid interval: %s" % interval)
+        sys.exit(13)
+    return timedelta
 
 
 def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
@@ -500,7 +525,7 @@ def is_backup_folder(name):
 
 class Repository(object):
 
-    def __init__(self, sources, destination, name, intervals, keep,
+    def __init__(self, sources, destination, name, intervals, keep, keep_age,
                  rsyncfilter, rsync_logfile_options, rsync_args):
         self.sources = sources
         self.destination = destination
@@ -508,6 +533,7 @@ class Repository(object):
         self.intervals = [(interval_name, cron.Cronjob(interval)) for
                           (interval_name, interval) in intervals.items()]
         self.keep = keep
+        self.keep_age = keep_age
         self.rsyncfilter = rsyncfilter
         self.rsync_logfile_options = rsync_logfile_options
         self.rsync_args = rsync_args
@@ -585,6 +611,11 @@ class Repository(object):
                       interval_name)
                 sys.exit(9)
 
+            if interval_name not in self.keep_age:
+                print("No corresponding age interval found of keep value %s" %
+                      interval_name)
+                sys.exit(10)
+
             backups_of_that_interval = [backup for backup in self.backups if
                                         backup.interval_name == interval_name]
 
@@ -597,6 +628,12 @@ class Repository(object):
                                           reverse=False)
             for i in range(0, count):
                 result.append(backups_of_that_interval[i])
+
+            for backup in backups_of_that_interval:
+                age = datetime.datetime.now() - backup.date
+                if age > self.keep_age[interval]:
+                    if backup not in result:
+                        result.append(backup)
 
         return result
 
