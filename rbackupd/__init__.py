@@ -624,7 +624,7 @@ class Repository(object):
         # have enough expired backups.
         result = []
         for interval in self.intervals:
-            interval_name = interval[0]
+            (interval_name, interval_cron) = interval
 
             if interval_name not in self.keep:
                 print("No corresponding interval found for keep value %s" %
@@ -650,7 +650,8 @@ class Repository(object):
                 result.append(backups_of_that_interval[i])
 
             for backup in backups_of_that_interval:
-                if backup.date < self.keep_age[interval]:
+                print(self.keep_age)
+                if backup.date < self.keep_age[interval_name]:
                     if backup not in result:
                         result.append(backup)
 
