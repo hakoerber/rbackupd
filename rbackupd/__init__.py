@@ -13,7 +13,7 @@ from . import interval
 from . import repository
 from . import rsync
 
-from .confconstants import *
+from .constants import *
 
 
 def run(config_file):
