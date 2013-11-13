@@ -317,7 +317,7 @@ def run(config_file):
 
         for i in conf_task_keep_ages.keys():
             conf_task_keep_ages[i] = \
-                _interval_to_timedelta(conf_task_keep_ages[i])
+                _interval_to_oldest_datetime(conf_task_keep_ages[i])
 
         repositories.append(
             Repository(conf_sources,
@@ -348,22 +348,36 @@ def run(config_file):
         time.sleep(wait_seconds)
 
 
-def _interval_to_timedelta(interval):
-    timedelta = None
+def _interval_to_oldest_datetime(interval):
+    result = datetime.datetime.now()
     suffix = interval[-1:]
     value = int(interval[:-1])
     if suffix == "m":
-        timedelta = datetime.timedelta(minutes=value)
+        result = result - datetime.timedelta(minutes=value)
     elif suffix == "h":
-        timedelta = datetime.timedelta(hours=value)
+        result = result - datetime.timedelta(hours=value)
     elif suffix == "w":
-        timedelta = datetime.timedelta(weeks=value)
+        result = result - datetime.timedelta(weeks=value)
     elif suffix == "d":
-        timedelta = datetime.timedelta(days=value)
+        result = result - datetime.timedelta(days=value)
+    elif suffix == "M":
+        year = (datetime.date.today().year -
+                (datetime.date.today().month - value) // 12)
+        month = datetime.date.today().month - value % 12
+        if month == 0:
+            month = 12
+        # get the last day of the month by going back one month from the first
+        # day of the following month
+        last_day_of_month = (datetime.date(year=year, month=month, day=1) -
+                             datetime.timedelta(days=1)).day
+        day = datetime.date.today().day
+        if day > last_day_of_month:
+            day = last_day_of_month
+        result = result.replace(year=year, month=month, day=day)
     else:
         print("Invalid interval: %s" % interval)
         sys.exit(13)
-    return timedelta
+    return result
 
 
 def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
@@ -633,8 +647,7 @@ class Repository(object):
                 result.append(backups_of_that_interval[i])
 
             for backup in backups_of_that_interval:
-                age = current_time - backup.date
-                if age > self.keep_age[interval]:
+                if backup.date < self.keep_age[interval]:
                     if backup not in result:
                         result.append(backup)
 
