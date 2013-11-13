@@ -364,7 +364,7 @@ def _interval_to_oldest_datetime(interval):
     elif suffix == "d":
         result = result - datetime.timedelta(days=value)
     elif suffix == "M":
-        year = (datetime.date.today().year -
+        year = (datetime.date.today().year +
                 (datetime.date.today().month - value) // 12)
         month = datetime.date.today().month - value % 12
         if month == 0:
