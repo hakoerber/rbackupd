@@ -108,9 +108,6 @@ class Repository(object):
 
             count = len(backups_of_that_interval) - self.keep[interval_name]
 
-            if count <= 0:
-                continue
-
             backups_of_that_interval.sort(key=lambda backup: backup.date,
                                           reverse=False)
             for i in range(0, count):
