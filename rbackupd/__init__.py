@@ -5,11 +5,11 @@ import subprocess
 import sys
 import time
 
+from . import cmd
 from . import config
 from . import cron
 from . import filesystem
 from . import rsync
-
 
 BACKUP_SUFFIX = ".snapshot"
 
@@ -416,12 +416,12 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
                 destination = os.path.join(real_backup.destination,
                                            backup.folder)
                 if conf_overlapping == "hardlink":
-                    copy_hardlinks(source, destination)
+                    cmd.copy_hardlinks(source, destination)
                 elif conf_overlapping == "symlink":
                     # We should create RELATIVE symlinks with "-r", as the
                     # repository might move, but the relative location of all
                     # backups will stay the same
-                    create_symlink(source, destination)
+                    cmd.create_symlink(source, destination)
                 else:
                     # panic and run away
                     print("invalid value for overlapping")
@@ -453,8 +453,8 @@ def create_backup(new_backup, rsync_cmd):
             print("rsync FAILED. aborting")
             sys.exit(EXIT_RSYNC_FAILED)
     if os.path.islink(symlink_latest):
-        remove_symlink(symlink_latest)
-    create_symlink(destination, symlink_latest)
+        cmd.remove_symlink(symlink_latest)
+    cmd.create_symlink(destination, symlink_latest)
 
 
 def handle_expired_backups(repository, current_time):
@@ -470,7 +470,7 @@ def handle_expired_backups(repository, current_time):
             expired_path = os.path.join(repository.destination,
                                         expired_backup.name)
             if os.path.islink(expired_path):
-                remove_symlink(expired_path)
+                cmd.remove_symlink(expired_path)
             else:
                 symlinks = []
                 for backup in repository.backups:
@@ -483,56 +483,27 @@ def handle_expired_backups(repository, current_time):
 
                 if len(symlinks) == 0:
                     # just remove the backups, no symlinks present
-                    remove_recursive(os.path.join(
+                    cmd.remove_recursive(os.path.join(
                         repository.destination, expired_backup.name))
                 else:
                     # replace the first symlink with the backup
                     symlink_path = os.path.join(repository.destination,
                                                 symlinks[0].name)
-                    remove_symlink(symlink_path)
+                    cmd.remove_symlink(symlink_path)
 
                     # move the real backup over
-                    move(expired_path, symlink_path)
+                    cmd.move(expired_path, symlink_path)
 
                     # now update all symlinks to the directory
                     for remaining_symlink in symlinks[1:]:
                         remaining_symlink_path = os.path.join(
                             repository.destination,
                             remaining_symlink.name)
-                        remove_symlink(remaining_symlink_path)
-                        create_symlink(symlink_path, remaining_symlink_path)
+                        cmd.remove_symlink(remaining_symlink_path)
+                        cmd.create_symlink(symlink_path,
+                                           remaining_symlink_path)
     else:
         print("no expired backups")
-
-
-def remove_symlink(path):
-    # to remove a symlink, we have to strip the trailing
-    # slash from the path
-    args = ["rm", path.rstrip("/")]
-    subprocess.check_call(args)
-
-
-def create_symlink(target, linkname):
-    args = ["ln", "-s", "-r", target, linkname]
-    subprocess.check_call(args)
-
-
-def move(path, target):
-    args = ["mv", path, target]
-    subprocess.check_call(args)
-
-
-def remove_recursive(path):
-    args = ["rm", "-r", "-f", path]
-    subprocess.check_call(args)
-
-
-def copy_hardlinks(path, target):
-    # we could alternatively use rsync with destination
-    # being the same as link-dest, this would create
-    # only hardlinks, too
-    args = ["cp", "-a", "-l", path, target]
-    subprocess.check_call(args)
 
 
 def is_backup_folder(name):
