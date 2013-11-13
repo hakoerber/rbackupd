@@ -181,7 +181,6 @@ def run(config_file):
         else:
             device_identifier = filesystem.DeviceIdentifier(path=conf_device)
 
-        print(device_identifier.get())
         device = filesystem.Device(device_identifier, filesystem="auto")
 
         mountpoint = filesystem.Mountpoint(
