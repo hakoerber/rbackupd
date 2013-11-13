@@ -114,7 +114,6 @@ class Repository(object):
                 result.append(backups_of_that_interval[i])
 
             for backup in backups_of_that_interval:
-                print(self.keep_age)
                 if backup.date < self.keep_age[interval_name]:
                     if backup not in result:
                         result.append(backup)
