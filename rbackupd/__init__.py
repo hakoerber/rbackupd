@@ -7,71 +7,70 @@ import time
 
 from . import cmd
 from . import config
+from . import constants as const
 from . import cron
 from . import filesystem
 from . import interval
 from . import repository
 from . import rsync
 
-from .constants import *
-
 
 def run(config_file):
     if not os.path.isfile(config_file):
         if not os.path.exists(config_file):
             print("config file not found")
-            sys.exit(EXIT_CONFIG_FILE_NOT_FOUND)
+            sys.exit(const.EXIT_CONFIG_FILE_NOT_FOUND)
         else:
             print("invalid config file")
-            sys.exit(EXIT_INVALID_CONFIG_FILE)
+            sys.exit(const.EXIT_INVALID_CONFIG_FILE)
 
     conf = config.Config(config_file)
 
     # this is the [rsync] section
-    conf_section_rsync = conf.get_section(CONF_SECTION_RSYNC)
-    conf_rsync_cmd = conf_section_rsync.get(CONF_KEY_RSYNC_CMD, "rsync")
+    conf_section_rsync = conf.get_section(const.CONF_SECTION_RSYNC)
+    conf_rsync_cmd = conf_section_rsync.get(const.CONF_KEY_RSYNC_CMD, "rsync")
 
-    conf_sections_mounts = conf.get_sections(CONF_SECTION_MOUNT)
+    conf_sections_mounts = conf.get_sections(const.CONF_SECTION_MOUNT)
 
     # these are the [default] options that can be overwritten in the specific
     # [task] section
-    conf_section_default = conf.get_section(CONF_SECTION_DEFAULT)
+    conf_section_default = conf.get_section(const.CONF_SECTION_DEFAULT)
     conf_default_rsync_logfile = conf_section_default.get(
-        CONF_KEY_RSYNC_LOGFILE, None)
+        const.CONF_KEY_RSYNC_LOGFILE, None)
     conf_default_rsync_logfile_name = conf_section_default.get(
-        CONF_KEY_RSYNC_LOGFILE_NAME, None)
+        const.CONF_KEY_RSYNC_LOGFILE_NAME, None)
     conf_default_rsync_logfile_format = conf_section_default.get(
-        CONF_KEY_RSYNC_LOGFILE_FORMAT, None)
+        const.CONF_KEY_RSYNC_LOGFILE_FORMAT, None)
 
     conf_default_filter_patterns = conf_section_default.get(
-        CONF_KEY_FILTER_PATTERNS, None)
+        const.CONF_KEY_FILTER_PATTERNS, None)
 
     conf_default_include_patterns = conf_section_default.get(
-        CONF_KEY_INCLUDE_PATTERNS, None)
+        const.CONF_KEY_INCLUDE_PATTERNS, None)
     conf_default_exclude_patterns = conf_section_default.get(
-        CONF_KEY_EXCLUDE_PATTERNS, None)
+        const.CONF_KEY_EXCLUDE_PATTERNS, None)
 
     conf_default_include_files = conf_section_default.get(
-        CONF_KEY_INCLUDE_FILE, None)
+        const.CONF_KEY_INCLUDE_FILE, None)
     conf_default_exclude_files = conf_section_default.get(
-        CONF_KEY_EXCLUDE_FILE, None)
+        const.CONF_KEY_EXCLUDE_FILE, None)
 
     conf_default_create_destination = conf_section_default.get(
-        CONF_KEY_CREATE_DESTINATION, None)
+        const.CONF_KEY_CREATE_DESTINATION, None)
 
     conf_default_one_filesystem = conf_section_default.get(
-        CONF_KEY_ONE_FILESYSTEM, None)
+        const.CONF_KEY_ONE_FILESYSTEM, None)
 
     conf_default_rsync_args = conf_section_default.get(
-        CONF_KEY_RSYNC_ARGS, None)
+        const.CONF_KEY_RSYNC_ARGS, None)
 
     conf_default_ssh_args = conf_section_default.get(
-        CONF_KEY_SSH_ARGS, None)
+        const.CONF_KEY_SSH_ARGS, None)
 
     conf_default_overlapping = conf_section_default.get(
-        CONF_KEY_OVERLAPPING, None)
+        const.CONF_KEY_OVERLAPPING, None)
 
-    conf_sections_tasks = conf.get_sections(CONF_SECTION_TASK)
+    conf_sections_tasks = conf.get_sections(const.CONF_SECTION_TASK)
 
     if conf_sections_mounts is None:
         conf_sections_mounts = []
@@ -80,13 +79,13 @@ def run(config_file):
         if len(mount) == 0:
             continue
 
-        conf_device = mount[CONF_KEY_DEVICE][0]
-        conf_mountpoint = mount[CONF_KEY_MOUNTPOINT][0]
-        conf_mountpoint_ro = mount.get(CONF_KEY_MOUNTPOINT_RO, [None])[0]
+        conf_device = mount[const.CONF_KEY_DEVICE][0]
+        conf_mountpoint = mount[const.CONF_KEY_MOUNTPOINT][0]
+        conf_mountpoint_ro = mount.get(const.CONF_KEY_MOUNTPOINT_RO, [None])[0]
         conf_mountpoint_options = mount.get(
-            CONF_KEY_MOUNTPOINT_OPTIONS, [None])[0]
+            const.CONF_KEY_MOUNTPOINT_OPTIONS, [None])[0]
         conf_mountpoint_ro_options = mount.get(
-            CONF_KEY_MOUNTPOINT_RO_OPTIONS, [None])[0]
+            const.CONF_KEY_MOUNTPOINT_RO_OPTIONS, [None])[0]
 
         if conf_mountpoint_options is None:
             conf_mountpoint_options = ['rw']
@@ -100,14 +99,14 @@ def run(config_file):
             conf_mountpoint_ro_options = conf_mountpoint_ro_options.split(',')
             conf_mountpoint_ro_options.append('ro')
 
-        conf_mountpoint_create = mount[CONF_KEY_MOUNTPOINT_CREATE][0]
+        conf_mountpoint_create = mount[const.CONF_KEY_MOUNTPOINT_CREATE][0]
 
-        conf_mountpoint_ro_create = mount.get(CONF_KEY_MOUNTPOINT_RO_CREATE,
-                                              [None])[0]
+        conf_mountpoint_ro_create = mount.get(
+            const.CONF_KEY_MOUNTPOINT_RO_CREATE, [None])[0]
         if (conf_mountpoint_ro is not None and
                 conf_mountpoint_ro_create is None):
             print("mountpoint_ro_create needed")
-            sys.exit(EXIT_NO_MOUNTPOINT_CREATE)
+            sys.exit(const.EXIT_NO_MOUNTPOINT_CREATE)
 
         if (conf_mountpoint_ro is not None and conf_mountpoint_ro_create and
                 not os.path.exists(conf_mountpoint_ro)):
@@ -155,45 +154,45 @@ def run(config_file):
         # these are the options given in the specific tasks. if none are given,
         # the default values from the [default] sections will be used.
         conf_rsync_logfile = task.get(
-            CONF_KEY_RSYNC_LOGFILE, conf_default_rsync_logfile)
+            const.CONF_KEY_RSYNC_LOGFILE, conf_default_rsync_logfile)
         conf_rsync_logfile_name = task.get(
-            CONF_KEY_RSYNC_LOGFILE_NAME, conf_default_rsync_logfile_name)[0]
+            const.CONF_KEY_RSYNC_LOGFILE_NAME, conf_default_rsync_logfile_name)[0]
         conf_rsync_logfile_format = task.get(
-            CONF_KEY_RSYNC_LOGFILE_FORMAT,
+            const.CONF_KEY_RSYNC_LOGFILE_FORMAT,
             conf_default_rsync_logfile_format)[0]
 
         conf_filter_patterns = task.get(
-            CONF_KEY_FILTER_PATTERNS, conf_default_filter_patterns)
+            const.CONF_KEY_FILTER_PATTERNS, conf_default_filter_patterns)
 
         conf_include_patterns = task.get(
-            CONF_KEY_INCLUDE_PATTERNS, conf_default_include_patterns)
+            const.CONF_KEY_INCLUDE_PATTERNS, conf_default_include_patterns)
         conf_exclude_patterns = task.get(
-            CONF_KEY_EXCLUDE_PATTERNS, conf_default_exclude_patterns)
+            const.CONF_KEY_EXCLUDE_PATTERNS, conf_default_exclude_patterns)
 
         conf_include_files = task.get(
-            CONF_KEY_INCLUDE_FILE, conf_default_include_files)
+            const.CONF_KEY_INCLUDE_FILE, conf_default_include_files)
         conf_exclude_files = task.get(
-            CONF_KEY_EXCLUDE_FILE, conf_default_exclude_files)
+            const.CONF_KEY_EXCLUDE_FILE, conf_default_exclude_files)
 
         conf_create_destination = task.get(
-            CONF_KEY_CREATE_DESTINATION, conf_default_create_destination)
+            const.CONF_KEY_CREATE_DESTINATION, conf_default_create_destination)
 
         conf_one_filesystem = task.get(
-            CONF_KEY_ONE_FILESYSTEM, conf_default_one_filesystem)[0]
+            const.CONF_KEY_ONE_FILESYSTEM, conf_default_one_filesystem)[0]
 
         conf_rsync_args = task.get(
-            CONF_KEY_RSYNC_ARGS, conf_default_rsync_args)
+            const.CONF_KEY_RSYNC_ARGS, conf_default_rsync_args)
 
         conf_ssh_args = task.get(
-            CONF_KEY_SSH_ARGS, conf_default_ssh_args)
-        conf_ssh_args = SSH_CMD + " " + " ".join(conf_ssh_args)
+            const.CONF_KEY_SSH_ARGS, conf_default_ssh_args)
+        conf_ssh_args = const.SSH_CMD + " " + " ".join(conf_ssh_args)
 
         conf_overlapping = task.get(
-            CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
+            const.CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
 
         # these are the options that are not given in the [default] section.
-        conf_destination = task[CONF_KEY_DESTINATION][0]
-        conf_sources = task[CONF_KEY_SOURCE]
+        conf_destination = task[const.CONF_KEY_DESTINATION][0]
+        conf_sources = task[const.CONF_KEY_SOURCE]
 
         if conf_overlapping not in ["single", "hardlink", "symlink"]:
             print("invalid value for \"overlapping\": %s" % conf_overlapping)
@@ -207,7 +206,7 @@ def run(config_file):
                 continue
         if not os.path.isdir(conf_destination):
             print("destination \"%s\" not a directory" % conf_destination)
-            sys.exit(EXIT_INVALID_DESTINATION)
+            sys.exit(const.EXIT_INVALID_DESTINATION)
 
         if conf_include_files is not None:
             for include_file in conf_include_files:
@@ -215,11 +214,11 @@ def run(config_file):
                     continue
                 if not os.path.exists(include_file):
                     print("include file \"%s\" not found" % include_file)
-                    sys.exit(EXIT_INCLUDE_FILE_NOT_FOUND)
+                    sys.exit(const.EXIT_INCLUDE_FILE_NOT_FOUND)
                 elif not os.path.isfile(include_file):
                     print("include file \"%s\" is not a valid file" %
                           include_file)
-                    sys.exit(EXIT_INCLUDE_FILE_INVALID)
+                    sys.exit(const.EXIT_INCLUDE_FILE_INVALID)
 
         if conf_exclude_files is not None:
             for exclude_file in conf_exclude_files:
@@ -227,11 +226,11 @@ def run(config_file):
                     continue
                 if not os.path.exists(exclude_file):
                     print("exclude file \"%s\" not found" % exclude_file)
-                    sys.exit(EXIT_EXCULDE_FILE_NOT_FOUND)
+                    sys.exit(const.EXIT_EXCULDE_FILE_NOT_FOUND)
                 elif not os.path.isfile(exclude_file):
                     print("exclude file \"%s\" is not a valid file" %
                           exclude_file)
-                    sys.exit(EXIT_EXCLUDE_FILE_INVALID)
+                    sys.exit(const.EXIT_EXCLUDE_FILE_INVALID)
 
         if conf_rsync_logfile:
             conf_rsync_logfile_options = rsync.LogfileOptions(
@@ -258,10 +257,10 @@ def run(config_file):
             ssh_args = ["--rsh", conf_ssh_args]
         conf_rsync_args.extend(ssh_args)
 
-        conf_taskname = task[CONF_KEY_TASKNAME][0]
-        conf_task_intervals = task[CONF_KEY_INTERVAL]
-        conf_task_keeps = task[CONF_KEY_KEEP]
-        conf_task_keep_ages = task[CONF_KEY_KEEP_AGE]
+        conf_taskname = task[const.CONF_KEY_TASKNAME][0]
+        conf_task_intervals = task[const.CONF_KEY_INTERVAL]
+        conf_task_keeps = task[const.CONF_KEY_KEEP]
+        conf_task_keep_ages = task[const.CONF_KEY_KEEP_AGE]
 
         for i in conf_task_keep_ages.keys():
             conf_task_keep_ages[i] = \
@@ -338,7 +337,7 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
                 else:
                     # panic and run away
                     print("invalid value for overlapping")
-                    sys.exit(EXIT_CONFIG_FILE_INVALID)
+                    sys.exit(const.EXIT_CONFIG_FILE_INVALID)
     else:
         print("no backup necessary")
 
@@ -346,7 +345,8 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
 def create_backup(new_backup, rsync_cmd):
     destination = os.path.join(new_backup.destination,
                                new_backup.folder)
-    symlink_latest = os.path.join(new_backup.destination, SYMLINK_LATEST_NAME)
+    symlink_latest = os.path.join(new_backup.destination,
+                                  const.SYMLINK_LATEST_NAME)
     for source in new_backup.sources:
         if new_backup.link_ref is None:
             link_dest = None
@@ -364,7 +364,7 @@ def create_backup(new_backup, rsync_cmd):
         if returncode != 0:
             print(stderrdata)
             print("rsync FAILED. aborting")
-            sys.exit(EXIT_RSYNC_FAILED)
+            sys.exit(const.EXIT_RSYNC_FAILED)
     if os.path.islink(symlink_latest):
         cmd.remove_symlink(symlink_latest)
     cmd.create_symlink(destination, symlink_latest)
