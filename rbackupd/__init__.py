@@ -1,3 +1,4 @@
+import collections
 import datetime
 import os
 import re
@@ -260,11 +261,12 @@ def run(config_file):
         conf_taskname = task[const.CONF_KEY_TASKNAME][0]
         conf_task_intervals = task[const.CONF_KEY_INTERVAL]
         conf_task_keeps = task[const.CONF_KEY_KEEP]
-        conf_task_keep_ages = task[const.CONF_KEY_KEEP_AGE]
+        conf_task_keep_age = task[const.CONF_KEY_KEEP_AGE]
 
-        for i in conf_task_keep_ages.keys():
-            conf_task_keep_ages[i] = \
-                interval.interval_to_oldest_datetime(conf_task_keep_ages[i])
+        task_keep_age = collections.OrderedDict()
+        for (backup_interval, max_age) in conf_task_keep_age.items():
+            task_keep_age[backup_interval] = \
+                interval.interval_to_oldest_datetime(max_age)
 
         repositories.append(
             repository.Repository(conf_sources,
@@ -272,7 +274,7 @@ def run(config_file):
                                   conf_taskname,
                                   conf_task_intervals,
                                   conf_task_keeps,
-                                  conf_task_keep_ages,
+                                  task_keep_age,
                                   conf_rsyncfilter,
                                   conf_rsync_logfile_options,
                                   conf_rsync_args))
@@ -280,6 +282,12 @@ def run(config_file):
     while True:
         start = datetime.datetime.now()
         for repo in repositories:
+
+            for (backup_interval, max_age) in conf_task_keep_age.items():
+                task_keep_age[backup_interval] = \
+                    interval.interval_to_oldest_datetime(max_age)
+            repo.keep_age = task_keep_age
+
             create_backups_if_necessary(repo, conf_overlapping,
                                         conf_rsync_cmd)
             handle_expired_backups(repo, start)
