@@ -24,10 +24,10 @@ import subprocess
 import sys
 import time
 
-from . import cmd
 from . import config
 from . import constants as const
 from . import cron
+from . import files
 from . import filesystem
 from . import interval
 from . import repository
@@ -98,7 +98,7 @@ def run(config_file):
         if len(mount) == 0:
             continue
 
-        conf_device = mount[const.CONF_KEY_DEVICE][0]
+        conf_partition = mount[const.CONF_KEY_PARTITION][0]
         conf_mountpoint = mount[const.CONF_KEY_MOUNTPOINT][0]
         conf_mountpoint_ro = mount.get(const.CONF_KEY_MOUNTPOINT_RO, [None])[0]
         conf_mountpoint_options = mount.get(
@@ -139,16 +139,18 @@ def run(config_file):
             print("mountpoint does not exist")
             sys.exit()
 
-        if conf_device.startswith('UUID'):
-            uuid = conf_device.split('=')[1]
-            device_identifier = filesystem.DeviceIdentifier(uuid=uuid)
-        elif conf_device.startswith('LABEL'):
-            label = conf_device.split('=')[1]
-            device_identifier = filesystem.DeviceIdentifier(label=label)
+        if conf_partition.startswith('UUID'):
+            uuid = conf_partition.split('=')[1]
+            partition_identifier = filesystem.PartitionIdentifier(uuid=uuid)
+        elif conf_partition.startswith('LABEL'):
+            label = conf_partition.split('=')[1]
+            partition_identifier = filesystem.PartitionIdentifier(label=label)
         else:
-            device_identifier = filesystem.DeviceIdentifier(path=conf_device)
+            partition_identifier = filesystem.PartitionIdentifier(
+                path=conf_device)
 
-        device = filesystem.Device(device_identifier, filesystem="auto")
+        partition = filesystem.Partition(partition_identifier,
+                                         filesystem="auto")
 
         mountpoint = filesystem.Mountpoint(
             path=conf_mountpoint,
@@ -161,12 +163,21 @@ def run(config_file):
             mountpoint_ro = filesystem.Mountpoint(
                 path=conf_mountpoint_ro,
                 options=conf_mountpoint_ro_options)
-            device.mount(mountpoint_ro)
+            try:
+                partition.mount(mountpoint_ro)
+            except filesystem.MountpointInUseError as err:
+                print("mountpoint %s already in use" % err.path)
 
-            mountpoint_ro.bind(mountpoint)
+            try:
+                mountpoint_ro.bind(mountpoint)
+            except filesystem.MountpointInUseError as err:
+                print("mountpoint %s already in use" % err.path)
             mountpoint.remount(("rw", "relatime", "noexec", "nosuid"))
         else:
-            device.mount(mountpoint)
+            try:
+                partition.mount(mountpoint)
+            except filesystem.MountpointInUseError as err:
+                print("mountpoint %s already in use" % err.path)
 
     repositories = []
     for task in conf_sections_tasks:
@@ -174,8 +185,8 @@ def run(config_file):
         # the default values from the [default] sections will be used.
         conf_rsync_logfile = task.get(
             const.CONF_KEY_RSYNC_LOGFILE, conf_default_rsync_logfile)
-        conf_rsync_logfile_name = task.get(
-            const.CONF_KEY_RSYNC_LOGFILE_NAME, conf_default_rsync_logfile_name)[0]
+        conf_rsync_logfile_name = task.get(const.CONF_KEY_RSYNC_LOGFILE_NAME,
+                                           conf_default_rsync_logfile_name)[0]
         conf_rsync_logfile_format = task.get(
             const.CONF_KEY_RSYNC_LOGFILE_FORMAT,
             conf_default_rsync_logfile_format)[0]
@@ -323,7 +334,7 @@ def run(config_file):
 
 def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
     necessary_backups = repository.get_necessary_backups()
-    if necessary_backups is not None:
+    if len(necessary_backups) != 0:
         if conf_overlapping == "single":
             new_backup_interval_name = None
             exitloop = False
@@ -354,12 +365,12 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
                 destination = os.path.join(real_backup.destination,
                                            backup.folder)
                 if conf_overlapping == "hardlink":
-                    cmd.copy_hardlinks(source, destination)
+                    files.copy_hardlinks(source, destination)
                 elif conf_overlapping == "symlink":
                     # We should create RELATIVE symlinks with "-r", as the
                     # repository might move, but the relative location of all
                     # backups will stay the same
-                    cmd.create_symlink(source, destination)
+                    files.create_symlink(source, destination)
                 else:
                     # panic and run away
                     print("invalid value for overlapping")
@@ -392,12 +403,12 @@ def create_backup(new_backup, rsync_cmd):
             print("rsync FAILED. aborting")
             sys.exit(const.EXIT_RSYNC_FAILED)
     if os.path.islink(symlink_latest):
-        cmd.remove_symlink(symlink_latest)
-    cmd.create_symlink(destination, symlink_latest)
+        files.remove_symlink(symlink_latest)
+    files.create_symlink(destination, symlink_latest)
 
 
 def handle_expired_backups(repository, current_time):
-    expired_backups = repository.get_expired_backups(current_time)
+    expired_backups = repository.get_expired_backups()
     if len(expired_backups) > 0:
         for expired_backup in expired_backups:
             # as a backup might be a symlink to another backup, we have to
@@ -409,7 +420,7 @@ def handle_expired_backups(repository, current_time):
             expired_path = os.path.join(repository.destination,
                                         expired_backup.name)
             if os.path.islink(expired_path):
-                cmd.remove_symlink(expired_path)
+                files.remove_symlink(expired_path)
             else:
                 symlinks = []
                 for backup in repository.backups:
@@ -422,25 +433,25 @@ def handle_expired_backups(repository, current_time):
 
                 if len(symlinks) == 0:
                     # just remove the backups, no symlinks present
-                    cmd.remove_recursive(os.path.join(
+                    files.remove_recursive(os.path.join(
                         repository.destination, expired_backup.name))
                 else:
                     # replace the first symlink with the backup
                     symlink_path = os.path.join(repository.destination,
                                                 symlinks[0].name)
-                    cmd.remove_symlink(symlink_path)
+                    files.remove_symlink(symlink_path)
 
                     # move the real backup over
-                    cmd.move(expired_path, symlink_path)
+                    files.move(expired_path, symlink_path)
 
                     # now update all symlinks to the directory
                     for remaining_symlink in symlinks[1:]:
                         remaining_symlink_path = os.path.join(
                             repository.destination,
                             remaining_symlink.name)
-                        cmd.remove_symlink(remaining_symlink_path)
-                        cmd.create_symlink(symlink_path,
-                                           remaining_symlink_path)
+                        files.remove_symlink(remaining_symlink_path)
+                        files.create_symlink(symlink_path,
+                                             remaining_symlink_path)
     else:
         print("no expired backups")
 

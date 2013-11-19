@@ -28,6 +28,11 @@ BACKUP_SUFFIX = ".snapshot"
 
 
 class Repository(object):
+    """
+    Represents a repository of backups, which means a collection of backups
+    that are managed together. Provides methods to determine whether new
+    backups are necessary and get expired backups.
+    """
 
     def __init__(self, sources, destination, name, intervals, keep, keep_age,
                  rsyncfilter, rsync_logfile_options, rsync_args):
@@ -42,48 +47,44 @@ class Repository(object):
         self.rsync_logfile_options = rsync_logfile_options
         self.rsync_args = rsync_args
 
-        self._oldfolders = os.listdir(self.destination)
-        self._backups = self._parse_folders(self._oldfolders)
-
     @property
     def backups(self):
-        folders = os.listdir(self.destination)
-        if folders != self._oldfolders:
-            self._backups = self._parse_folders(folders)
-            self._oldfolders = folders
-        return self._backups
-
-    def _parse_folders(self, folders):
-        return [BackupFolder(folder) for folder in folders
+        return [BackupFolder(folder) for folder in os.listdir(self.destination)
                 if is_backup_folder(folder)]
 
     def get_necessary_backups(self):
-
+        """
+        Returns all backups deemed necessary.
+        :returns: A list of tuples containing all necessary backups, each tuple
+        consisting of the interval name as first and the interval cron object
+        as second element.
+        :returns: All backups deemed necessary.
+        :rtype: list of tuples.
+        """
         necessary_backups = []
-
         for (interval_name, interval) in self.intervals:
             latest_backup = self._get_latest_backup_of_interval(interval_name)
-
-            # if there is no backup of that type present, we have to make one
             if latest_backup is None:
                 necessary_backups.append((interval_name, interval))
                 continue
-
-            latest_backup_date = latest_backup.date
-            # cron.has_occured_since INCLUDES all occurences of the cronjob in
-            # the search. therefore if would match the last backup if it
-            # occured EXACTLY at the given time in the cronjob. ugly fix here:
-            # were just add 1 microsecond to the latest backup
-            latest_backup_date += datetime.timedelta(microseconds=1)
-
-            if interval.has_occured_since(latest_backup_date):
+            if interval.has_occured_since(latest_backup.date,
+                                          include_start=False):
                 necessary_backups.append((interval_name, interval))
-
-        if len(necessary_backups) == 0:
-            return None
         return necessary_backups
 
     def get_backup_params(self, new_backup_interval_name, timestamp=None):
+        """
+        Gets the parameters for a backup of the specific interval with a given
+        timestamp.
+        :param new_backup_interval_name: The interval name of the new backup.
+        :type new_backup_interval_name: string
+        :param timestamp: The timestamp of the new backup or the current time
+        of omitted.
+        :type timestamp: datetime.datetime instance
+        :returns: A BackupParameters instance with information about the new
+        backup.
+        :rtype: BackupParameters instance
+        """
         if timestamp is None:
             timestamp = datetime.datetime.now()
         new_link_ref = self._get_latest_backup()
@@ -101,14 +102,21 @@ class Repository(object):
                                          self.rsyncfilter,
                                          self.rsync_logfile_options,
                                          self.rsync_args)
-
         return backup_params
 
-    def get_expired_backups(self, current_time):
+    def get_expired_backups(self):
+        """
+        Returns all backups that are expired in the repository.
+        :param current_time: The current time to check against.
+        :type current_time: datetime.datetime instance
+        :returns: All expired backups.
+        :rtype: list of Backup instances
+        """
         # we will sort the folders and just loop from oldest to newest until we
         # have enough expired backups.
-        result = []
+        expired_backups = []
         for interval in self.intervals:
+
             (interval_name, interval_cron) = interval
 
             if interval_name not in self.keep:
@@ -124,21 +132,44 @@ class Repository(object):
             backups_of_that_interval = [backup for backup in self.backups if
                                         backup.interval_name == interval_name]
 
-            count = len(backups_of_that_interval) - self.keep[interval_name]
+            expired_backups.extend(
+                self._get_expired_backups_by_count(backups_of_that_interval,
+                                                   self.keep[interval_name]))
+            expired_backups.extend(
+                self._get_expired_backups_by_age(backups_of_that_interval,
+                                                 self.keep_age[interval_name]))
 
-            backups_of_that_interval.sort(key=lambda backup: backup.date,
-                                          reverse=False)
-            for i in range(0, count):
-                result.append(backups_of_that_interval[i])
+        return expired_backups
 
-            for backup in backups_of_that_interval:
-                if backup.date < self.keep_age[interval_name]:
-                    if backup not in result:
-                        result.append(backup)
+    def _get_expired_backups_by_count(self, backups, max_count):
+        """
+        Returns all backups that are expired relative to the maximum count of
+        kept backups. Practically, just returns all backups except the
+        "max_count" oldest.
+        """
+        expired_backups = []
+        count = len(backups) - max_count
+        backups.sort(key=lambda backup: backup.date, reverse=False)
+        for i in range(0, count):
+            expired_backups.append(backups[i])
+        return expired_backups
 
-        return result
+    def _get_expired_backups_by_age(self, backups, max_age):
+        """
+        Returns all backups that are expired relative to the maximum age of
+        kept backups. It pracically just returns all backups older than
+        max_age.
+        """
+        expired_backups = []
+        for backup in backups:
+            if backup.date < max_age:
+                expired_backups.append(backup)
+        return expired_backups
 
     def _get_latest_backup(self):
+        """
+        Returns the latest/youngest backup, or None if there is none.
+        """
         if len(self.backups) == 0:
             return None
         if len(self.backups) == 1:
@@ -150,6 +181,12 @@ class Repository(object):
         return latest
 
     def _get_latest_backup_of_interval(self, interval):
+        """
+        Returns the latest/youngest backup of the given interval, or None if
+        there is none.
+        :param interval: The name of the interval to search for.
+        :type interval: string
+        """
         if len(self.backups) == 0:
             return None
         latest = None
@@ -201,8 +238,4 @@ class BackupFolder(object):
 
 
 def is_backup_folder(name):
-    if BACKUP_REGEX.match(name):
-        return True
-    else:
-        print("%s is not a backup folder" % name)
-        return False
+    return BACKUP_REGEX.match(name)

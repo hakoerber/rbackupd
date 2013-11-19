@@ -113,16 +113,20 @@ class Cronjob(object):
                 return False
         return True
 
-    def has_occured_between(self, date_time_1, date_time_2):
+    def has_occured_between(self, date_time_1, date_time_2,
+                            include_start=True):
         """
-        Determines whether the cronjob has occured between two datetimes
-        (inclusive), what means that there was any match in this period. If
-        date_time_1 and date_time_2 represent the same point in time, the
-        behaviour is identical to matches(date_time_1)
+        Determines whether the cronjob has occured between two datetimes, what
+        means that there was any match in this period. If date_time_1 and
+        date_time_2 represent the same point in time, the behaviour is
+        identical to matches(date_time_1).
         :param date_time_1: The datetime determining the start of the period.
         :type date_time_1: datetime instance
         :param date_time_2: The datetime determining the end of the period.
         :type date_time_2: datetime instance
+        :param include_start: Determines whether the start should be included
+        into the search range.
+        :type include_start: bool
         :returns: True if the cronjob has occured between the two datetimes,
         False otherwise.
         :rtype: bool
@@ -145,21 +149,28 @@ class Cronjob(object):
                 (date_time_1 > max_val and date_time_2 > max_val)):
             return False
         most_recent_occurence = self.get_most_recent_occurence(date_time_2)
-        return most_recent_occurence >= date_time_1
+        if include_start:
+            return most_recent_occurence >= date_time_1
+        else:
+            return most_recent_occurence > date_time_1
 
-    def has_occured_since(self, date_time):
+    def has_occured_since(self, date_time, include_start=True):
         """
-        Determines whether the cronjob has ever occured since date_time
-        (inclusive), what means that there was any match in this period. If
-        date_time represents now, the bahaviour is identical to
-        matches(date_time)
+        Determines whether the cronjob has ever occured since date_time, what
+        means that there was any match in this period. If date_time represents
+        now, the bahaviour is identical to matches(date_time).
         :param date_time: The datetime in the past to check against.
         :type date_time: datetime instance
+        :param include_start: Determines whether the start should be included
+        into the search range.
+        :type include_start: bool
         :returns: True if the cronjob has occured since date_time, False
         otherwise.
         :raises: ValueError if date_time is in the future.
         """
-        return self.has_occured_between(date_time, datetime.datetime.now())
+        return self.has_occured_between(date_time,
+                                        datetime.datetime.now(),
+                                        include_start)
 
     def get_max_time(self):
         """

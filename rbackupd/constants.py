@@ -21,7 +21,7 @@ CONF_SECTION_RSYNC = "rsync"
 CONF_KEY_RSYNC_CMD = "cmd"
 
 CONF_SECTION_MOUNT = "mount"
-CONF_KEY_DEVICE = "device"
+CONF_KEY_PARTITION = "partition"
 CONF_KEY_MOUNTPOINT = "mountpoint"
 CONF_KEY_MOUNTPOINT_RO = "mountpoint_ro"
 CONF_KEY_MOUNTPOINT_OPTIONS = "mountpoint_options"
