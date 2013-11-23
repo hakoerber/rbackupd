@@ -21,8 +21,11 @@ This module wraps the rsync(1) command. It provides classes for special
 arguments of rsync for ease of use.
 """
 
+import logging
 import os
 import subprocess
+
+logger = logging.getLogger(__name__)
 
 
 def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
@@ -67,7 +70,7 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     args.append(source)
     args.append(destination)
 
-    print(" ".join(args))
+    logging.verbose("Executing \"%s\".", " ".join(args))
 
     # create the directory first, otherwise logging will fail
     os.mkdir(destination)
