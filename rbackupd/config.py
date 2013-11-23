@@ -121,7 +121,8 @@ class Config(object):
     def get_section(self, name):
         """
         Returns a specific section of the file. If the file contains multiple
-        sections with the same name, the first one will be returned.
+        sections with the same name, the first one will be returned. If there
+        is no section with that name, None will be returned.
         :param name: The name of the section.
         :type name: string
         """
@@ -139,14 +140,14 @@ class Config(object):
             if section[0] == name:
                 sections.append(section[1])
         if len(sections) == 0:
-            return None
+            return [None]
         return sections
 
     def _read_file(self):
         if self._file is not None:
             return
         if not os.path.isfile(self.path):
-            raise IOError("File not found.")
+            raise IOError("file not found")
         self._file = open(self.path).readlines()
 
     def _is_section(self, line):
