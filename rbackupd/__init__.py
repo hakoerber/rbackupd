@@ -57,7 +57,7 @@ stderr_handler = logging.StreamHandler(sys.stderr)
 
 stdout_handler.addFilter(levelhandler.LevelFilter(minlvl=logging.NOTSET,
                                                   maxlvl=logging.WARNING - 1))
-stdout_handler.addFilter(levelhandler.LevelFilter(minlvl=logging.WARNING,
+stderr_handler.addFilter(levelhandler.LevelFilter(minlvl=logging.WARNING,
                                                   maxlvl=logging.CRITICAL))
 
 console_logging_level = logging.INFO
