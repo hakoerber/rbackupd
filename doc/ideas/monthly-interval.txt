@@ -1,0 +1,7 @@
+As a month does not have a fixed amount of days, an interval of n months is not
+representable in a timedelta. Therefore, we define an interval of one month as
+the time between this day and the current day of the month one month ago. So for
+24.10. this means one month ago was 24.09.. If the current day of the month does
+not exist in the previous month, the maximum day of the month for the previous
+month is assumed. For 31.03 this means one month ago was the 28.03. or the 29.03
+in leap years.

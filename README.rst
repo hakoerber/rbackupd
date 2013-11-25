@@ -11,7 +11,7 @@ maximum number of backups that should be kept for every interval. Intervals
 can be given in a cron-like format, which means you have great flexibility in
 specifiying these intervals.
 
-Thanks to rsync, rbackupd will preserve hard links, special files such as named
+Thanks to rsync, rbackupd will preserve hardlinks, special files such as named
 sockets and fifos, device files, permissions, ownership, modification times,
 ACLs and extended attributes.
 
@@ -31,33 +31,34 @@ Requirements
 Usage
 -----
 
-``rbackupd <configuration file>``
+Type ``rbackupd --help`` to get a list of all available commands. Also look
+into ``INSTALL`` for help with an initial setup.
 
 Documentation
 -------------
 
-Look into doc/ for more detailed documentation.
+Look into ``doc/`` for more detailed documentation.
 
 Installation
 ------------
 
-See INSTALL for installation information.
+See ``INSTALL`` for installation information.
 
 Authors
 -------
 
-See AUTHORS for a list of authors.
+See ``AUTHORS`` for a list of authors.
 
 Changelog
 ---------
 
-See CHANGELOG for a complete changelog.
+See ``CHANGES.rst`` for a complete changelog.
 
 License
 -------
 
 rbackupd is licensed under the GNU General Public License version 3. See
-LICENSE for a copy of the GPL.
+``LICENSE`` for a copy of the GPL.
 
 Contact
 -------
