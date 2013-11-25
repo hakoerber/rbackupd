@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
       name = 'rbackupd',
-      version = '0.3',
+      version = '0.4-dev',
       url = 'http://github.com/whatevsz/rbackupd',
       download_url = 'http://github.com/whatevsz/rbackupd/releases',
 
