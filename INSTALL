@@ -1,6 +1,6 @@
 To install, just run
 
-    python setup.py install
+    # python setup.py install
 
 with root privileges.
 
@@ -13,10 +13,11 @@ Modify it to your needs.
 
 To run rbackupd, just execute
 
-    rbackupd <path to the configuration file>
+    # rbackupd
 
-Root privileges are only required when you try to access or write files that
-do not belong to you.
+This will use the configuration file at /etc/rbackupd/rbackupd.conf. If you
+want to use a different location, use the -c switch. You require root
+privileges for the program to work.
 
 For Arch Linux users, there is a PKGBUILD available at
 

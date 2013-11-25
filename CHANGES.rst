@@ -9,7 +9,9 @@ v0.1 - *2013-10-09*
 v0.2 - *2013-11-10*
 -------------------
 
-+ [FEATURE] Option to automatically mount devices on startup.
-+ [FEATURE] Dynamic handling of overlapping backups.
++ [NEW] Option to automatically mount devices on startup.
++ [NEW] Dynamic handling of overlapping backups.
 
-+ [FIX] Various little and serious bugs.
++ [FIXED] Various little and serious bugs.
+
+

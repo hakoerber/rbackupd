@@ -31,7 +31,8 @@ Requirements
 Usage
 -----
 
-``rbackupd [-c <configuration file>]``
+Type ``rbackupd --help`` to get a list of all available commands. Also look
+into ``INSTALL`` for help with an initial setup.
 
 Documentation
 -------------
