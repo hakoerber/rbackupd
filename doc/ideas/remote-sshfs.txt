@@ -1,0 +1,24 @@
+We can make the whole backup process host-independent with sshfs. It can be used
+to mount remote devices or folders into the local tree. After that, we can
+access it through all methods on local files/directories. The tricky part is the
+mounting itself. Problems:
+
+1)
+We need a conventient way to address remote hosts in the configuration file. We
+can either use a separate key, e.g. "host=<ip>" or a special host syntax for
+directores, as used by ssh itself, like "<ip>:/dir/"
+
+2)
+We also need a way to specify the user on the remote machine. The method used in
+(1) might be extended, with another key or "<user>@<ip>:/dir/"-like syntax.
+
+3)
+sshfs cannot mount a device directly, it can only mount a directory. Therefore,
+either we disable automounting for remote devices, or we need a separate ssh
+connection to mount the remote device on the remote host and then use sshfs to
+mount the mountpoint to our local machine.
+
+
+
+
+
