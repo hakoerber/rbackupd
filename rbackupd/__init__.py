@@ -378,8 +378,8 @@ def run(config_file):
 
         if conf_overlapping not in ["single", "hardlink", "symlink"]:
             logger.critical("Invalid value for key \"overlapping\": %s"
-                            "Valid values: single, hardlink, symlink. "
-                            "Aborting.", conf_overlapping)
+                            "Valid values: \"single\", \"hardlink\", "
+                            "\"symlink\". Aborting.", conf_overlapping)
             sys.exit(EXIT_INVALID_CONFIG_FILE)
 
         # now we can check the values
@@ -523,11 +523,17 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
                 destination = os.path.join(real_backup.destination,
                                            backup.folder)
                 if conf_overlapping == "hardlink":
+                    logger.info("Hardlinking snapshot \"%s\" into \"%s\"",
+                                os.path.basename(source),
+                                os.path.basename(destination))
                     files.copy_hardlinks(source, destination)
                 elif conf_overlapping == "symlink":
                     # We should create RELATIVE symlinks with "-r", as the
                     # repository might move, but the relative location of all
                     # backups will stay the same
+                    logger.info("Symlinking \"%s\" to \"%s\"",
+                                os.path.basename(source),
+                                os.path.basename(destination))
                     files.create_symlink(source, destination)
     else:
         logger.info("No backup necessary.")
@@ -544,7 +550,7 @@ def create_backup(new_backup, rsync_cmd):
         else:
             link_dest = os.path.join(new_backup.destination,
                                      new_backup.link_ref)
-        logger.info("Creating backup \"%s\".", destination)
+        logger.info("Creating backup \"%s\".", os.path.basename(destination))
         (returncode, stdoutdata, stderrdata) = rsync.rsync(
             rsync_cmd,
             source,
@@ -572,10 +578,13 @@ def handle_expired_backups(repository, current_time):
             # other backupSSS!! might be a symlink to it, so we have to check
             # all other backups. we overwrite one symlink with the backup and
             # update all remaining symlinks
-            logger.info("Expired backup: %s", expired_backup.name)
+            logger.info("Expired backup: \"%s\".",
+                        expired_backup.name)
             expired_path = os.path.join(repository.destination,
                                         expired_backup.name)
             if os.path.islink(expired_path):
+                logger.info("Removing symlink \"%s\".",
+                            os.path.basename(expired_path))
                 files.remove_symlink(expired_path)
             else:
                 symlinks = []
@@ -589,15 +598,23 @@ def handle_expired_backups(repository, current_time):
 
                 if len(symlinks) == 0:
                     # just remove the backups, no symlinks present
+                    logger.info("Removing directory \"%s\".",
+                                expired_backup.name)
                     files.remove_recursive(os.path.join(
                         repository.destination, expired_backup.name))
                 else:
                     # replace the first symlink with the backup
                     symlink_path = os.path.join(repository.destination,
                                                 symlinks[0].name)
+                    logger.info("Removing symlink \"%s\".",
+                                os.path.basename(symlink_path))
                     files.remove_symlink(symlink_path)
 
                     # move the real backup over
+
+                    logger.info("Moving \"%s\" to \"%s\".",
+                                os.path.basename(expired_path),
+                                os.path.basename(symlink_path))
                     files.move(expired_path, symlink_path)
 
                     # now update all symlinks to the directory
