@@ -70,7 +70,7 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     args.append(source)
     args.append(destination)
 
-    logging.verbose("Executing \"%s\".", " ".join(args))
+    logger.verbose("Executing \"%s\".", " ".join(args))
 
     # create the directory first, otherwise logging will fail
     os.mkdir(destination)

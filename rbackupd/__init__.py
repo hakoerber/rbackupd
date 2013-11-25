@@ -19,6 +19,7 @@
 import collections
 import datetime
 import logging
+import logging.handlers
 import os
 import re
 import subprocess
@@ -35,47 +36,112 @@ from . import levelhandler
 from . import repository
 from . import rsync
 
-logger = logging.getLogger(__name__)
 
-# custom log levels
-logging.VERBOSE = 15
-logging.QUIET = 25
+def set_up_logging(console_loglevel, logfile_loglevel):
+    global logger
+    global logging_console_handlers
+    global logging_memory_handler
+    global logging_file_handlers
+    # setting logleve to minimum level, as the handlers take care of the
+    # filtering by level
+    logger.setLevel(logging.DEBUG)
 
-logging.addLevelName(logging.VERBOSE, "VERBOSE")
-logging.addLevelName(logging.QUIET, "QUIET")
+    # console handlers
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stderr_handler = logging.StreamHandler(sys.stderr)
 
-logging.Logger.verbose = \
-    lambda obj, msg, *args, **kwargs: \
-    obj.log(logging.VERBOSE, msg, *args, **kwargs)
+    stdout_handler.addFilter(levelhandler.LevelFilter(
+        minlvl=logging.NOTSET,
+        maxlvl=logging.WARNING - 1))
+    stderr_handler.addFilter(levelhandler.LevelFilter(
+        minlvl=logging.WARNING,
+        maxlvl=logging.CRITICAL))
 
-logging.Logger.quiet = \
-    lambda obj, msg, *args, **kwargs: \
-    obj.log(logging.QUIET, msg, *args, **kwargs)
+    stdout_handler.setLevel(console_loglevel)
+    stderr_handler.setLevel(console_loglevel)
 
-stdout_handler = logging.StreamHandler(sys.stdout)
-stderr_handler = logging.StreamHandler(sys.stderr)
+    console_formatter = logging.Formatter(
+        fmt="[{asctime}] {message}",
+        datefmt="%H:%M:%S",
+        style='{')
 
-stdout_handler.addFilter(levelhandler.LevelFilter(minlvl=logging.NOTSET,
-                                                  maxlvl=logging.WARNING - 1))
-stderr_handler.addFilter(levelhandler.LevelFilter(minlvl=logging.WARNING,
-                                                  maxlvl=logging.CRITICAL))
+    stdout_handler.setFormatter(console_formatter)
+    stderr_handler.setFormatter(console_formatter)
 
-console_logging_level = logging.INFO
+    logger.addHandler(stdout_handler)
+    logger.addHandler(stderr_handler)
 
-stdout_handler.setLevel(console_logging_level)
-stderr_handler.setLevel(console_logging_level)
+    logging_console_handlers.append(stdout_handler)
+    logging_console_handlers.append(stderr_handler)
 
-console_formatter = logging.Formatter(
-    fmt="[{asctime}] {message}",
-    style='{')
+    # logfile_handlers
+    logging_memory_handler = logging.handlers.MemoryHandler(
+        capacity=1000000,
+        flushLevel=logging.CRITICAL + 1,   # we do not want it to auto-flush
+        target=None)   # we will set the target when a logfile is available
 
-stdout_handler.setFormatter(console_formatter)
-stderr_handler.setFormatter(console_formatter)
+    logging_memory_handler.setLevel(logfile_loglevel)
 
-logger.addHandler(stdout_handler)
-logger.addHandler(stderr_handler)
+    global logfile_formatter
+    logfile_formatter = logging.Formatter(
+        fmt="[{asctime},{msecs}] [{levelname}] {filename}: {message}",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        style='{')
 
-logger.setLevel(logging.DEBUG)
+    logging_memory_handler.setFormatter(logfile_formatter)
+
+    logger.addHandler(logging_memory_handler)
+
+    logging_file_handlers.append(logging_memory_handler)
+
+
+def change_console_logging_level(loglevel):
+    for handler in logging_console_handlers:
+        handler.setLevel(loglevel)
+
+
+def change_file_logging_level(loglevel):
+    for handler in logging_file_handlers:
+        handler.setLevel(loglevel)
+
+
+def change_to_logfile_logging(logfile_path, loglevel):
+    global logging_memory_handler
+    if logging_memory_handler is None:
+        pass
+
+    logfile_handler = logging.handlers.RotatingFileHandler(
+        logfile_path,
+        mode='a',
+        maxBytes=1000000,
+        backupCount=9)
+
+    logfile_handler.setLevel(loglevel)
+
+    logfile_handler.setFormatter(logfile_formatter)
+
+    logging_memory_handler.setTarget(logfile_handler)
+    logging_memory_handler.flush()
+    logging_memory_handler.close()
+
+    logger.addHandler(logfile_handler)
+    logging_file_handlers.append(logfile_handler)
+
+    logger.removeHandler(logging_memory_handler)
+    logging_file_handlers.remove(logging_memory_handler)
+    logging_memory_handler = None
+
+
+def main(config_file, console_loglevel):
+    try:
+        change_console_logging_level(console_loglevel)
+        run(config_file)
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt.")
+        sys.exit(const.EXIT_KEYBOARD_INTERRUPT)
+    except SystemExit as err:
+        logger.info("Exiting with code %s.", err.code)
+        sys.exit(err.code)
 
 
 def run(config_file):
@@ -94,6 +160,37 @@ def run(config_file):
                         err.lineno,
                         err.line,
                         err.message)
+
+    # this is the [logging] section
+    conf_section_logging = conf.get_section(const.CONF_SECTION_LOGGING)
+    conf_logfile_path = conf_section_logging[const.CONF_KEY_LOGFILE_PATH][0]
+    conf_loglevel = conf_section_logging[const.CONF_KEY_LOGLEVEL][0]
+
+    if conf_loglevel not in const.CONF_VALUES_LOGLEVEL:
+        logger.critical("Invalid value for key \"%s\": \"%s\". Valid values: "
+                        "%s. Aborting.",
+                        const.CONF_KEY_LOGLEVEL,
+                        conf_loglevel,
+                        ",".join(const.CONF_VALUES_LOGLEVEL))
+        sys.exit(const.EXIT_INVALID_CONFIG_FILE)
+    if conf_loglevel == "quiet":
+        conf_loglevel = logging.WARNING
+    elif conf_loglevel == "default":
+        conf_loglevel = logging.INFO
+    elif conf_loglevel == "verbose":
+        conf_loglevel = logging.VERBOSE
+    elif conf_loglevel == "debug":
+        conf_loglevel = logging.DEBUG
+    else:
+        assert(False)
+
+    logfile_dir = os.path.dirname(conf_logfile_path)
+    if not os.path.exists(logfile_dir):
+        os.mkdir(logfile_dir)
+
+    # now we can change from logging into memory to logging to the logfile
+    change_to_logfile_logging(logfile_path=conf_logfile_path,
+                              loglevel=conf_loglevel)
 
     # this is the [rsync] section
     conf_section_rsync = conf.get_section(const.CONF_SECTION_RSYNC)
@@ -508,12 +605,31 @@ def handle_expired_backups(repository, current_time):
                         remaining_symlink_path = os.path.join(
                             repository.destination,
                             remaining_symlink.name)
+                        logger.info("Removing symlink \"%s\".",
+                                    os.path.basename(remaining_symlink_path))
                         files.remove_symlink(remaining_symlink_path)
+                        logger.info("Creating symlink \"%s\" pointing to "
+                                    "\"%s\".",
+                                    os.path.basename(remaining_symlink_path),
+                                    os.path.basename(symlink_path))
                         files.create_symlink(symlink_path,
                                              remaining_symlink_path)
     else:
         logger.info("No expired backups.")
 
 
-if __name__ == '__main__':
-    run(sys.argv[1])
+logger = logging.getLogger(__name__)
+logging_memory_handler = None
+logging_console_handlers = []
+logging_file_handlers = []
+
+# custom log levels
+logging.VERBOSE = 15
+# necessary to get the name in log output instead of an integer
+logging.addLevelName(logging.VERBOSE, "VERBOSE")
+logging.Logger.verbose = \
+    lambda obj, msg, *args, **kwargs: \
+    obj.log(logging.VERBOSE, msg, *args, **kwargs)
+
+set_up_logging(console_loglevel=logging.INFO,
+               logfile_loglevel=logging.VERBOSE)

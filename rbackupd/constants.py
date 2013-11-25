@@ -17,6 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Constants for the configuration file.
+CONF_SECTION_LOGGING = "logging"
+CONF_KEY_LOGFILE_PATH = "logfile"
+CONF_KEY_LOGLEVEL = "loglevel"
+CONF_VALUES_LOGLEVEL = ("quiet", "default", "verbose", "debug")
+
 CONF_SECTION_RSYNC = "rsync"
 CONF_KEY_RSYNC_CMD = "cmd"
 
@@ -66,6 +71,7 @@ EXIT_CONFIG_FILE_INVALID = 9
 EXIT_INVALID_DESTINATION = 10
 EXIT_INVALID_CONFIG_FILE = 11
 EXIT_NO_MOUNTPOINT_CREATE = 12
+EXIT_KEYBOARD_INTERRUPT = 130
 
 
 # The name of the symlink to the latest backup.
