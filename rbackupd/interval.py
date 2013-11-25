@@ -17,7 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import logging
 import sys
+
+logger = logging.getLogger(__name__)
 
 
 def interval_to_oldest_datetime(interval):
@@ -47,6 +50,6 @@ def interval_to_oldest_datetime(interval):
             day = last_day_of_month
         result = result.replace(year=year, month=month, day=day)
     else:
-        print("Invalid interval: %s" % interval)
+        logger.critical("Invalid interval: \"%s\". Aborting.", interval)
         sys.exit(13)
     return result

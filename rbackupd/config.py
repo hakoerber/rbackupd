@@ -91,6 +91,7 @@ class ParseError(Exception):
 
     def __init__(self, msg, line, lineno):
         super(ParseError, self).__init__(msg)
+        self.message = msg
         self.line = line
         self.lineno = lineno
 

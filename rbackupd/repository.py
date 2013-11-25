@@ -16,15 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
 import datetime
+import logging
+import os
 import re
+import sys
 
 from . import cron
 
 BACKUP_REGEX = re.compile(r'^.*_.*_.*\.snapshot$')
 BACKUP_SUFFIX = ".snapshot"
+
+logger = logging.getLogger(__name__)
 
 
 class Repository(object):
@@ -120,13 +123,13 @@ class Repository(object):
             (interval_name, interval_cron) = interval
 
             if interval_name not in self.keep:
-                print("No corresponding interval found for keep value %s" %
-                      interval_name)
+                logger.critical("No corresponding interval found for keep "
+                                "value \"%s\"", interval_name)
                 sys.exit(9)
 
             if interval_name not in self.keep_age:
-                print("No corresponding age interval found of keep value %s" %
-                      interval_name)
+                logger.critical("No corresponding age interval found of keep "
+                                "value \"%s\"", interval_name)
                 sys.exit(10)
 
             backups_of_that_interval = [backup for backup in self.backups if

@@ -20,8 +20,11 @@
 Module to handle partitions and mountpoints.
 """
 
+import logging
 import os
 import subprocess
+
+logger = logging.getLogger(__name__)
 
 
 class PartitionIdentifiers(object):
@@ -99,6 +102,7 @@ class Partition(object):
                 "-t", self.filesystem]
         args.extend(partition_args)
         args.append(mountpoint.path)
+        logger.verbose("Executing \"%s\".", " ".join(args))
         try:
             subprocess.check_output(args)
         except subprocess.CalledProcessError:
@@ -134,6 +138,7 @@ class Mountpoint(object):
                 "-o",
                 (','.join(new_options) + ",remount").lstrip(','),
                 self.path]
+        logger.verbose("Executing \"%s\".", " ".join(args))
         try:
             subprocess.check_output(args)
         except subprocess.CalledProcessError as err:
@@ -153,8 +158,8 @@ class Mountpoint(object):
                 "--bind",
                 self.path,
                 target.path]
+        logger.verbose("Executing \"%s\".", " ".join(args))
         try:
             subprocess.check_output(args)
         except subprocess.CalledProcessError as err:
-            print(err.output)
             raise
