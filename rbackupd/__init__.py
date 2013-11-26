@@ -536,7 +536,7 @@ def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
                                 os.path.basename(destination))
                     files.create_symlink(source, destination)
     else:
-        logger.info("No backup necessary.")
+        logger.verbose("No backup necessary.")
 
 
 def create_backup(new_backup, rsync_cmd):
@@ -632,7 +632,7 @@ def handle_expired_backups(repository, current_time):
                         files.create_symlink(symlink_path,
                                              remaining_symlink_path)
     else:
-        logger.info("No expired backups.")
+        logger.verbose("No expired backups.")
 
 
 logger = logging.getLogger(__name__)
