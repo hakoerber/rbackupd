@@ -84,7 +84,7 @@ def set_up_logging(console_loglevel, logfile_loglevel):
 
     global logfile_formatter
     logfile_formatter = logging.Formatter(
-        fmt="[{asctime},{msecs}] [{levelname}] {filename}: {message}",
+        fmt="[{asctime}] [{levelname}] {filename}: {message}",
         datefmt="%Y-%m-%d %H:%M:%S",
         style='{')
 
