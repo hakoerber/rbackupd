@@ -154,6 +154,10 @@ class Repository(object):
         count = len(backups) - max_count
         backups.sort(key=lambda backup: backup.date, reverse=False)
         for i in range(0, count):
+            logger.debug("Backup \"%s\" is expired because count %s is "
+                         "exceeded.",
+                         backups[i].name,
+                         max_count)
             expired_backups.append(backups[i])
         return expired_backups
 
@@ -166,6 +170,10 @@ class Repository(object):
         expired_backups = []
         for backup in backups:
             if backup.date < max_age:
+                logger.debug("Backup \"%s\" older than \"%s\" which is the "
+                             "oldest possible time",
+                             backup.name,
+                             max_age.isoformat())
                 expired_backups.append(backup)
         return expired_backups
 

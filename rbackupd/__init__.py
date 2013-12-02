@@ -160,6 +160,7 @@ def run(config_file):
                         err.lineno,
                         err.line,
                         err.message)
+    logger.debug("Config file parsed successfully.")
 
     # this is the [logging] section
     conf_section_logging = conf.get_section(const.CONF_SECTION_LOGGING)
@@ -186,6 +187,8 @@ def run(config_file):
 
     logfile_dir = os.path.dirname(conf_logfile_path)
     if not os.path.exists(logfile_dir):
+        logger.debug("Folder containing log file does not exist, will be "
+                     "created.")
         os.mkdir(logfile_dir)
 
     # now we can change from logging into memory to logging to the logfile
@@ -277,12 +280,15 @@ def run(config_file):
 
         if (conf_mountpoint_ro is not None and conf_mountpoint_ro_create and
                 not os.path.exists(conf_mountpoint_ro)):
+            logger.debug("Readonly mountpoint does not exist, will be "
+                         "created.")
             os.mkdir(conf_mountpoint_ro)
         if not os.path.exists(conf_mountpoint_ro):
             logger.critical("Path of \"mountpoint_ro\" does not exist. "
                             "Aborting.")
             sys.exit()
         if conf_mountpoint_create and not os.path.exists(conf_mountpoint):
+            logger.debug("Mountpoint does not exist, will be created.")
             os.mkdir(conf_mountpoint)
         if not os.path.exists(conf_mountpoint):
             logger.critical("Path of \"mountpoint\" does not exist. Aborting")
@@ -313,6 +319,8 @@ def run(config_file):
                 path=conf_mountpoint_ro,
                 options=conf_mountpoint_ro_options)
             try:
+                logger.debug("Mounting readonly mountpoint %s",
+                             mountpoint_ro.path)
                 partition.mount(mountpoint_ro)
             except filesystem.MountpointInUseError as err:
                 logger.warning("Mountpoint \"%s\" already in use. "
