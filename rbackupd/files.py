@@ -22,7 +22,8 @@ This module wraps frequently needed operations on files and directories.
 
 import logging
 import os
-import subprocess
+
+from . import cmd
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,7 @@ def remove_symlink(path):
     if not os.path.islink(path):
         raise ValueError("%s not a symlink" % path)
     args = ["rm", path.rstrip("/")]
-    logger.verbose("Executing \"%s\".", " ".join(args))
-    subprocess.check_call(args)
+    cmd.check_call(args)
 
 
 def create_symlink(target, linkname):
@@ -55,8 +55,7 @@ def create_symlink(target, linkname):
     if os.path.exists(linkname):
         raise ValueError("%s already exists" % linkname)
     args = ["ln", "-s", "-r", target, linkname]
-    logger.verbose("Executing \"%s\".", " ".join(args))
-    subprocess.check_call(args)
+    cmd.check_call(args)
 
 
 def move(path, target):
@@ -72,8 +71,7 @@ def move(path, target):
     if os.path.exists(target):
         raise ValueError("%s does already exist" % target)
     args = ["mv", path, target]
-    logger.verbose("Executing \"%s\".", " ".join(args))
-    subprocess.check_call(args)
+    cmd.check_call(args)
 
 
 def remove_recursive(path):
@@ -86,8 +84,7 @@ def remove_recursive(path):
     if not os.path.exists(path):
         raise ValueError("%s does not exist" % path)
     args = ["rm", "-r", "-f", path]
-    logger.verbose("Executing \"%s\".", " ".join(args))
-    subprocess.check_call(args)
+    cmd.check_call(args)
 
 
 def copy_hardlinks(path, target):
@@ -106,5 +103,4 @@ def copy_hardlinks(path, target):
     # we could alternatively use rsync with destination being the same as
     # link-dest, this would create only hardlinks, too
     args = ["cp", "-a", "-l", path, target]
-    logger.verbose("Executing \"%s\".", " ".join(args))
-    subprocess.check_call(args)
+    cmd.check_call(args)

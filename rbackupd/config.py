@@ -185,15 +185,11 @@ class Config(object):
         raise ParseError("invalid value", line, lineno)
 
     def _parse_section(self, line, lineno):
-        if not self._is_section(line):
-            raise ParseError("not a section", line, lineno)
         retval = line[1:-1]
         logger.debug("Parsed line \"%s\" as section \"%s\".", line, retval)
         return retval
 
     def _parse_key_value(self, line, lineno):
-        if not self._is_key_value(line, lineno):
-            raise ParseError("not a key-value pair", line, lineno)
         (key_and_tag, _, value) = line.partition("=")
         value = value.strip()
         key_and_tag = key_and_tag.strip()
