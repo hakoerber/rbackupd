@@ -657,4 +657,4 @@ logging.Logger.verbose = \
     obj.log(logging.VERBOSE, msg, *args, **kwargs)
 
 set_up_logging(console_loglevel=logging.INFO,
-               logfile_loglevel=logging.VERBOSE)
+               logfile_loglevel=logging.DEBUG)
