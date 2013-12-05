@@ -78,8 +78,11 @@ structure:
 ]
 """
 
-import os
 import collections
+import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 
 class ParseError(Exception):
@@ -145,17 +148,25 @@ class Config(object):
         return sections
 
     def _read_file(self):
+        logger.debug("Reading file %s", self.path)
         if self._file is not None:
+            logger.debug("File already read, will not be read again.")
             return
         if not os.path.isfile(self.path):
             raise IOError("file not found")
         self._file = open(self.path).readlines()
 
     def _is_section(self, line):
-        return line.startswith("[") and line.endswith("]")
+        if line.startswith("[") and line.endswith("]"):
+            logger.debug("Line \"%s\" is a section.", line)
+            return True
+        return False
 
     def _is_comment(self, line):
-        return line.startswith("#")
+        if line.startswith("#"):
+            logger.debug("Line \"%s\" is a comment.", line)
+            return True
+        return False
 
     def _is_key_value(self, line, lineno):
         if self._is_section(line) or self._is_comment(line):
@@ -165,20 +176,20 @@ class Config(object):
         (key, _, value) = line.partition("=")
         key = key.strip()
         value = value.strip()
-        if value.isdigit():
-            return True
-        if value == "":
-            return True
-        if value.startswith('"') and value.endswith('"'):
-            return True
-        if value.lower() in ["true", "false", "yes", "no"]:
+        if (value.isdigit() or
+                value == "" or
+                value.startswith('"') and value.endswith('"') or
+                value.lower() in ["true", "false", "yes", "no"]):
+            logger.debug("Line \"%s\" is a key-value pair.", line)
             return True
         raise ParseError("invalid value", line, lineno)
 
     def _parse_section(self, line, lineno):
         if not self._is_section(line):
             raise ParseError("not a section", line, lineno)
-        return line[1:-1]
+        retval = line[1:-1]
+        logger.debug("Parsed line \"%s\" as section \"%s\".", line, retval)
+        return retval
 
     def _parse_key_value(self, line, lineno):
         if not self._is_key_value(line, lineno):
@@ -205,12 +216,9 @@ class Config(object):
             value = None
         else:
             value = value[1:-1]
+        logger.debug("Parsed line \"%s\" as key-value pair with key: \"%s\", "
+                     "tag: \"%s\", value: \"%s\".", line, key, tag, value)
         return (key, tag, value)
-
-    def _is_valid(self, line):
-        return (self._is_comment(line) or
-                self._is_section(line) or
-                self._is_key_value(line))
 
     def _is_empty(self, line):
         return len(line) == 0
@@ -221,12 +229,16 @@ class Config(object):
         for line in self._file:
             lineno += 1
             line = line.strip()
+            logger.debug("Parsing line %s: \"%s\"", lineno, line)
             if self._is_empty(line) or self._is_comment(line):
+                logger.debug("Skipping line because comment or empty.")
                 continue
             elif self._is_section(line):
                 current_section = [None, None]
                 current_section[0] = self._parse_section(line, lineno)
                 current_section[1] = collections.OrderedDict()
+                logger.debug("Starting new section \"%s\".",
+                             current_section[0])
                 self._structure.append(current_section)
             elif self._is_key_value(line, lineno):
                 if current_section is None:
@@ -236,15 +248,23 @@ class Config(object):
                         lineno)
                 (key, tag, value) = self._parse_key_value(line, lineno)
                 if tag is None:
+                    logger.debug("Key-value pair without tag found.")
                     if not key in current_section[1]:
+                        logger.debug("Adding new key \"%s\"", key)
                         current_section[1][key] = [value]
                     else:
+                        logger.debug("Appending to already existing key "
+                                     "\"%s\".", key)
                         current_section[1][key].append(value)
                 else:
+                    logger.debug("Key-value pair with tag found.")
                     if not key in current_section[1]:
+                        logger.debug("Adding new key \"%s\"", key)
                         current_section[1][key] = collections.OrderedDict(
                             {tag: value})
                     else:
+                        logger.debug("Appending to already existing key "
+                                     "\"%s\".", key)
                         current_section[1][key][tag] = value
             else:
                 raise ParseError("invalid line", line, lineno)
