@@ -66,12 +66,22 @@ class Repository(object):
         """
         necessary_backups = []
         for (interval_name, interval) in self.intervals:
+            logger.debug("Repository \"%s\": Checking interval \"%s\" for "
+                         "necessary backups.",
+                         self.name,
+                         interval_name)
             latest_backup = self._get_latest_backup_of_interval(interval_name)
             if latest_backup is None:
+                logger.debug("Repository \"%s\": Backup necessary as no other "
+                             "backups of that interval are present.",
+                             self.name)
                 necessary_backups.append((interval_name, interval))
                 continue
             if interval.has_occured_since(latest_backup.date,
                                           include_start=False):
+                logger.debug("Repository \"%s\": Backup necessary as interval "
+                             "occured since latest backup.",
+                             self.name)
                 necessary_backups.append((interval_name, interval))
         return necessary_backups
 
@@ -88,15 +98,22 @@ class Repository(object):
         backup.
         :rtype: BackupParameters instance
         """
+        logger.debug("Repository \"%s\": Getting parameters of new backup.",
+                     self.name)
+        # TODO: timestamp should never be None, this is just for shitty
+        # pseudo backupwards compability
         if timestamp is None:
             timestamp = datetime.datetime.now()
+        logger.debug("Timestamp of new backup: \"%s\"", timestamp.isoformat())
         new_link_ref = self._get_latest_backup()
         new_link_ref = new_link_ref.name if new_link_ref is not None else None
+        logger.debug("Link-ref of new backup: \"%s\"", new_link_ref)
         new_folder = "%s_%s_%s%s" % (self.name,
                                      timestamp.strftime(
                                          "%Y-%m-%dT%H:%M:%S"),
                                      new_backup_interval_name,
                                      BACKUP_SUFFIX)
+        logger.debug("Folder name of new backup: \"%s\"", new_folder)
 
         backup_params = BackupParameters(self.sources,
                                          self.destination,
@@ -118,9 +135,11 @@ class Repository(object):
         # we will sort the folders and just loop from oldest to newest until we
         # have enough expired backups.
         expired_backups = []
-        for interval in self.intervals:
-
-            (interval_name, interval_cron) = interval
+        for (interval_name, interval_cron) in self.intervals:
+            logger.debug("Repository \"%s\": Checking interval \"%s\" for "
+                         "expired backups.",
+                         self.name,
+                         interval_name)
 
             if interval_name not in self.keep:
                 logger.critical("No corresponding interval found for keep "
@@ -170,8 +189,8 @@ class Repository(object):
         expired_backups = []
         for backup in backups:
             if backup.date < max_age:
-                logger.debug("Backup \"%s\" older than \"%s\" which is the "
-                             "oldest possible time",
+                logger.debug("Backup \"%s\" expired because it is older than "
+                             "\"%s\" which is the oldest possible time",
                              backup.name,
                              max_age.isoformat())
                 expired_backups.append(backup)

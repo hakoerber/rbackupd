@@ -91,19 +91,28 @@ def set_up_logging(console_loglevel, logfile_loglevel):
     logger.addHandler(logging_memory_handler)
 
     logging_file_handlers.append(logging_memory_handler)
+    logger.debug("Logging setup completed.")
 
 
 def change_console_logging_level(loglevel):
+    logger.debug("Changing logging level for console to \"%s\".",
+                 logging.getLevelName(loglevel))
     for handler in logging_console_handlers:
         handler.setLevel(loglevel)
 
 
 def change_file_logging_level(loglevel):
+    logger.debug("Changing logging level for log file to \"%s\".",
+                 logging.getLevelName(loglevel))
     for handler in logging_file_handlers:
         handler.setLevel(loglevel)
 
 
 def change_to_logfile_logging(logfile_path, loglevel):
+    logger.debug("Switching from logging to memory to logging to file at "
+                 "\"%s\" with level \"%s\".",
+                 logfile_path,
+                 logging.getLevelName(loglevel))
     global logging_memory_handler
     if logging_memory_handler is None:
         return
@@ -128,6 +137,7 @@ def change_to_logfile_logging(logfile_path, loglevel):
     logger.removeHandler(logging_memory_handler)
     logging_file_handlers.remove(logging_memory_handler)
     logging_memory_handler = None
+    logger.debug("Successfully switched to file logging.")
 
 
 def main(config_file, console_loglevel):
@@ -135,9 +145,11 @@ def main(config_file, console_loglevel):
         change_console_logging_level(console_loglevel)
         run(config_file)
     except KeyboardInterrupt:
+        logger.debug("Caught KeyboardInterrupt")
         logger.info("Keyboard interrupt.")
         sys.exit(const.EXIT_KEYBOARD_INTERRUPT)
     except SystemExit as err:
+        logger.debug("Caught SystemExit")
         logger.info("Exiting with code %s.", err.code)
         sys.exit(err.code)
 
@@ -151,6 +163,7 @@ def run(config_file):
             logger.critical("Invalid config file. Aborting.")
             sys.exit(const.EXIT_INVALID_CONFIG_FILE)
 
+    logger.debug("Starting configuration file parsing.")
     try:
         conf = config.Config(config_file)
     except config.ParseError as err:
@@ -474,6 +487,7 @@ def run(config_file):
 
     while True:
         start = datetime.datetime.now()
+        logger.debug("Starting cycle.")
         for repo in repositories:
 
             for (backup_interval, max_age) in conf_task_keep_age.items():
@@ -493,6 +507,7 @@ def run(config_file):
         else:
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
+        logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
         time.sleep(wait_seconds)
 
 
@@ -637,6 +652,7 @@ def handle_expired_backups(repository, current_time):
                                     os.path.basename(symlink_path))
                         files.create_symlink(symlink_path,
                                              remaining_symlink_path)
+            logger.info("Backup removed successfully.")
     else:
         logger.verbose("No expired backups.")
 
