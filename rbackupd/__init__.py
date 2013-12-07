@@ -247,16 +247,13 @@ def run(config_file):
     conf_default_ssh_args = conf_section_default.get(
         const.CONF_KEY_SSH_ARGS, None)
 
-    conf_default_overlapping = conf_section_default.get(
-        const.CONF_KEY_OVERLAPPING, None)
-
     conf_sections_tasks = conf.get_sections(const.CONF_SECTION_TASK)
 
     if conf_sections_mounts is None:
         conf_sections_mounts = []
 
     for mount in conf_sections_mounts:
-        if len(mount) == 0:
+        if mount is None or len(mount) == 0:
             continue
 
         conf_partition = mount[const.CONF_KEY_PARTITION][0]
@@ -388,18 +385,9 @@ def run(config_file):
             const.CONF_KEY_SSH_ARGS, conf_default_ssh_args)
         conf_ssh_args = const.SSH_CMD + " " + " ".join(conf_ssh_args)
 
-        conf_overlapping = task.get(
-            const.CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
-
         # these are the options that are not given in the [default] section.
         conf_destination = task[const.CONF_KEY_DESTINATION][0]
         conf_sources = task[const.CONF_KEY_SOURCE]
-
-        if conf_overlapping not in ["single", "hardlink", "symlink"]:
-            logger.critical("Invalid value for key \"overlapping\": %s"
-                            "Valid values: \"single\", \"hardlink\", "
-                            "\"symlink\". Aborting.", conf_overlapping)
-            sys.exit(EXIT_INVALID_CONFIG_FILE)
 
         # now we can check the values
         if not os.path.exists(conf_destination):
@@ -483,7 +471,8 @@ def run(config_file):
                                   task_keep_age,
                                   conf_rsyncfilter,
                                   conf_rsync_logfile_options,
-                                  conf_rsync_args))
+                                  conf_rsync_args,
+                                  conf_rsync_cmd))
 
     while True:
         start = datetime.datetime.now()
@@ -495,9 +484,8 @@ def run(config_file):
                     interval.interval_to_oldest_datetime(max_age)
             repo.keep_age = task_keep_age
 
-            create_backups_if_necessary(repo, conf_overlapping,
-                                        conf_rsync_cmd)
-            handle_expired_backups(repo, start)
+            repo.create_backups_if_necessary(timestamp=start)
+            repo.handle_expired_backups(timestamp=start)
 
         # we have to get the current time again, as the above might take a lot
         # of time
@@ -509,152 +497,6 @@ def run(config_file):
             wait_seconds = (nextmin - now).seconds + 1
         logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
         time.sleep(wait_seconds)
-
-
-def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
-    necessary_backups = repository.get_necessary_backups()
-    if len(necessary_backups) != 0:
-        if conf_overlapping == "single":
-            new_backup_interval_name = None
-            exitloop = False
-            for (name, _) in repository.intervals:
-                for (backup_name, _) in necessary_backups:
-                    if name == backup_name:
-                        new_backup_interval_name = name
-                        exitloop = True
-                        break
-                if exitloop:
-                    break
-            new_backup = repository.get_backup_params(new_backup_interval_name)
-            create_backup(new_backup, conf_rsync_cmd)
-
-        else:
-            # Make one "real" backup and just hard/symlink all others to this
-            # one
-            timestamp = datetime.datetime.now()
-            real_backup = repository.get_backup_params(necessary_backups[0][0],
-                                                       timestamp=timestamp)
-            create_backup(real_backup, conf_rsync_cmd)
-            for backup in necessary_backups[1:]:
-                backup = repository.get_backup_params(backup[0], timestamp)
-                # real_backup.destination and backup.destination are guaranteed
-                # to be identical as they are from the same repository
-                source = os.path.join(real_backup.destination,
-                                      real_backup.folder)
-                destination = os.path.join(real_backup.destination,
-                                           backup.folder)
-                if conf_overlapping == "hardlink":
-                    logger.info("Hardlinking snapshot \"%s\" into \"%s\"",
-                                os.path.basename(source),
-                                os.path.basename(destination))
-                    files.copy_hardlinks(source, destination)
-                elif conf_overlapping == "symlink":
-                    # We should create RELATIVE symlinks with "-r", as the
-                    # repository might move, but the relative location of all
-                    # backups will stay the same
-                    logger.info("Symlinking \"%s\" to \"%s\"",
-                                os.path.basename(source),
-                                os.path.basename(destination))
-                    files.create_symlink(source, destination)
-    else:
-        logger.verbose("No backup necessary.")
-
-
-def create_backup(new_backup, rsync_cmd):
-    destination = os.path.join(new_backup.destination,
-                               new_backup.folder)
-    symlink_latest = os.path.join(new_backup.destination,
-                                  const.SYMLINK_LATEST_NAME)
-    for source in new_backup.sources:
-        if new_backup.link_ref is None:
-            link_dest = None
-        else:
-            link_dest = os.path.join(new_backup.destination,
-                                     new_backup.link_ref)
-        logger.info("Creating backup \"%s\".", os.path.basename(destination))
-        (returncode, stdoutdata, stderrdata) = rsync.rsync(
-            rsync_cmd,
-            source,
-            destination,
-            link_dest,
-            new_backup.rsync_args,
-            new_backup.rsyncfilter,
-            new_backup.rsync_logfile_options)
-        if returncode != 0:
-            logger.critical("Rsync failed. Aborting. Stderr:\n%s", stderrdata)
-            sys.exit(const.EXIT_RSYNC_FAILED)
-        else:
-            logger.info("Backup finished successfully.")
-    if os.path.islink(symlink_latest):
-        files.remove_symlink(symlink_latest)
-    files.create_symlink(destination, symlink_latest)
-
-
-def handle_expired_backups(repository, current_time):
-    expired_backups = repository.get_expired_backups()
-    if len(expired_backups) > 0:
-        for expired_backup in expired_backups:
-            # as a backup might be a symlink to another backup, we have to
-            # consider: when it is a symlink, just remove the symlink. if not,
-            # other backupSSS!! might be a symlink to it, so we have to check
-            # all other backups. we overwrite one symlink with the backup and
-            # update all remaining symlinks
-            logger.info("Expired backup: \"%s\".",
-                        expired_backup.name)
-            expired_path = os.path.join(repository.destination,
-                                        expired_backup.name)
-            if os.path.islink(expired_path):
-                logger.info("Removing symlink \"%s\".",
-                            os.path.basename(expired_path))
-                files.remove_symlink(expired_path)
-            else:
-                symlinks = []
-                for backup in repository.backups:
-                    backup_path = os.path.join(repository.destination,
-                                               backup.name)
-                    if (os.path.samefile(expired_path,
-                                         os.path.realpath(backup_path))
-                            and os.path.islink(backup_path)):
-                        symlinks.append(backup)
-
-                if len(symlinks) == 0:
-                    # just remove the backups, no symlinks present
-                    logger.info("Removing directory \"%s\".",
-                                expired_backup.name)
-                    files.remove_recursive(os.path.join(
-                        repository.destination, expired_backup.name))
-                else:
-                    # replace the first symlink with the backup
-                    symlink_path = os.path.join(repository.destination,
-                                                symlinks[0].name)
-                    logger.info("Removing symlink \"%s\".",
-                                os.path.basename(symlink_path))
-                    files.remove_symlink(symlink_path)
-
-                    # move the real backup over
-
-                    logger.info("Moving \"%s\" to \"%s\".",
-                                os.path.basename(expired_path),
-                                os.path.basename(symlink_path))
-                    files.move(expired_path, symlink_path)
-
-                    # now update all symlinks to the directory
-                    for remaining_symlink in symlinks[1:]:
-                        remaining_symlink_path = os.path.join(
-                            repository.destination,
-                            remaining_symlink.name)
-                        logger.info("Removing symlink \"%s\".",
-                                    os.path.basename(remaining_symlink_path))
-                        files.remove_symlink(remaining_symlink_path)
-                        logger.info("Creating symlink \"%s\" pointing to "
-                                    "\"%s\".",
-                                    os.path.basename(remaining_symlink_path),
-                                    os.path.basename(symlink_path))
-                        files.create_symlink(symlink_path,
-                                             remaining_symlink_path)
-            logger.info("Backup removed successfully.")
-    else:
-        logger.verbose("No expired backups.")
 
 
 logger = logging.getLogger(__name__)
