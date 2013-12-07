@@ -106,7 +106,7 @@ def change_file_logging_level(loglevel):
 def change_to_logfile_logging(logfile_path, loglevel):
     global logging_memory_handler
     if logging_memory_handler is None:
-        pass
+        return
 
     logfile_handler = logging.handlers.RotatingFileHandler(
         logfile_path,
