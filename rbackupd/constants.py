@@ -47,7 +47,6 @@ CONF_KEY_CREATE_DESTINATION = "create_destination"
 CONF_KEY_ONE_FILESYSTEM = "one_fs"
 CONF_KEY_RSYNC_ARGS = "rsync_args"
 CONF_KEY_SSH_ARGS = "ssh_args"
-CONF_KEY_OVERLAPPING = "overlapping"
 
 CONF_SECTION_TASK = "task"
 CONF_KEY_DESTINATION = "destination"
@@ -84,3 +83,16 @@ DEFAULT_RSYNC_CMD = "rsync"
 
 # The ssh command
 SSH_CMD = "ssh"
+
+
+NAME_META_FILE = "rbackupd.info"
+NAME_BACKUP_SUBFOLDER = "backup"
+PATTERN_BACKUP_FOLDER = "%s_%s_%s.snapshot"
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+META_FILE_LINES = 3
+META_FILE_INDEX_NAME = 0
+META_FILE_INDEX_DATE = 1
+META_FILE_INDEX_INTERVAL = 2
+
+META_FILE_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
