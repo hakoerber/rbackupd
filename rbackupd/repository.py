@@ -59,9 +59,12 @@ class Repository(object):
         return self._backups
 
     def _read_backups(self):
+        logger.debug("Repository \"%\": Reading backups.", self.name)
         backups = []
         for folder in os.listdir(self.destination):
             if folder == const.SYMLINK_LATEST_NAME:
+                logger.debug("Repository \"%\": Ignoring latest symlink "
+                             "\"%s\".", self.name, folder)
                 continue
             backups.append(BackupFolder(os.path.join(self.destination,
                                                      folder)))
@@ -81,12 +84,16 @@ class Repository(object):
 
     def _register_backup(self, backup):
         assert(self._backups is not None)
+        logger.debug("Repository \"%s\": Registering backup \"%s\".",
+                     self.name. backup.name)
         self._backups.append(backup)
 
     def _unregister_backup(self, backup):
         assert(self._backups is not None)
         if backup not in self._backups:
             raise ValueError("backup not found")
+        logger.debug("Repository \"%s\": Unregistering backup \"%s\".",
+                     self.name. backup.name)
         self._backups.remove(backup)
 
     def get_necessary_intervals(self):
