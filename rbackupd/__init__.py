@@ -457,6 +457,14 @@ def run(config_file):
         conf_task_keeps = task[const.CONF_KEY_KEEP]
         conf_task_keep_age = task[const.CONF_KEY_KEEP_AGE]
 
+        for (interval_name, keep_count) in conf_task_keeps.items():
+            if keep_count <= 0:
+                logger.critical("Maximum backup count must be greater than "
+                                "zero, %s found for interval \"%s\".",
+                                keep_count,
+                                interval_name)
+                sys.exit(const.EXIT_INVALID_CONFIG_FILE)
+
         task_keep_age = collections.OrderedDict()
         for (backup_interval, max_age) in conf_task_keep_age.items():
             task_keep_age[backup_interval] = \
