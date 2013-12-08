@@ -146,7 +146,7 @@ class Repository(object):
             self.destination, new_folder_name))
 
         params = self.get_backup_params(interval)
-        new_backup.set_meta_data(name=self.name,
+        new_backup.set_meta_data(name=new_folder_name,
                                  date=timestamp,
                                  interval=interval.name)
         new_backup.prepare()
