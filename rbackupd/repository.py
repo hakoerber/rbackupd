@@ -85,7 +85,7 @@ class Repository(object):
     def _register_backup(self, backup):
         assert(self._backups is not None)
         logger.debug("Repository \"%s\": Registering backup \"%s\".",
-                     self.name. backup.name)
+                     self.name, backup.name)
         self._backups.append(backup)
 
     def _unregister_backup(self, backup):
@@ -93,7 +93,7 @@ class Repository(object):
         if backup not in self._backups:
             raise ValueError("backup not found")
         logger.debug("Repository \"%s\": Unregistering backup \"%s\".",
-                     self.name. backup.name)
+                     self.name, backup.name)
         self._backups.remove(backup)
 
     def get_necessary_intervals(self):
