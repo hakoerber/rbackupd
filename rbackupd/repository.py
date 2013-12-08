@@ -51,12 +51,20 @@ class Repository(object):
         self.rsync_logfile_options = rsync_logfile_options
         self.rsync_args = rsync_args
         self.rsync_cmd = rsync_cmd
+        self._backups = self._read_backups()
 
     @property
     def backups(self):
-        backups = [BackupFolder(os.path.join(self.destination, folder)) for
-                   folder in os.listdir(self.destination) if
-                   folder != const.SYMLINK_LATEST_NAME]
+        assert(self._backups is not None)
+        return self._backups
+
+    def _read_backups(self):
+        backups = []
+        for folder in os.listdir(self.destination):
+            if folder == const.SYMLINK_LATEST_NAME:
+                continue
+            backups.append(BackupFolder(os.path.join(self.destination,
+                                                     folder)))
         logger.debug("Repository \"%s\": Found the following folders: %s.",
                      self.name,
                      backups)
@@ -70,6 +78,16 @@ class Repository(object):
         for backup in backups:
             backup.read_meta_file()
         return backups
+
+    def _register_backup(self, backup):
+        assert(self._backups is not None)
+        self._backups.append(backup)
+
+    def _unregister_backup(self, backup):
+        assert(self._backups is not None)
+        if backup not in self._backups:
+            raise ValueError("backup not found")
+        self._backups.remove(backup)
 
     def get_necessary_intervals(self):
         """
@@ -152,6 +170,7 @@ class Repository(object):
         new_backup.prepare()
         self.create_backup(new_backup, params)
         new_backup.write_meta_file()
+        self._register_backup(new_backup)
 
         for interval in necessary_intervals[1:]:
             symlink_name = const.PATTERN_BACKUP_FOLDER % (
@@ -167,6 +186,7 @@ class Repository(object):
             symlink_backup.prepare()
             self._symlink_backup_subfolders(new_backup, symlink_backup)
             symlink_backup.write_meta_file()
+            self._register_backup(symlink_backup)
 
     def create_backup(self, new_backup, params):
         destination = new_backup.backup_path
@@ -255,6 +275,7 @@ class Repository(object):
                 logger.info("Removing backup containing symlink \"%s\".",
                             expired_backup.name)
                 files.remove_recursive(expired_backup.path)
+                self._unregister_backup(expired_backup)
             else:
                 symlinks = []
                 for backup in self.backups:
@@ -268,6 +289,7 @@ class Repository(object):
                     logger.info("Removing directory \"%s\".",
                                 expired_backup.name)
                     files.remove_recursive(expired_backup.path)
+                    self._unregister_backup(expired_backup)
                 else:
                     # replace the first symlink with the backup
                     logger.info("Removing symlink \"%s\".",
@@ -283,6 +305,7 @@ class Repository(object):
 
                     # remote the "rest" of the expired backup
                     files.remove_recursive(expired_backup.path)
+                    self._unregister_backup(expired_backup)
 
                     new_real_backup = symlinks[0]
                     # now update all symlinks to the directory
