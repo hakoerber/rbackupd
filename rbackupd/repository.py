@@ -59,11 +59,11 @@ class Repository(object):
         return self._backups
 
     def _read_backups(self):
-        logger.debug("Repository \"%\": Reading backups.", self.name)
+        logger.debug("Repository \"%s\": Reading backups.", self.name)
         backups = []
         for folder in os.listdir(self.destination):
             if folder == const.SYMLINK_LATEST_NAME:
-                logger.debug("Repository \"%\": Ignoring latest symlink "
+                logger.debug("Repository \"%s\": Ignoring latest symlink "
                              "\"%s\".", self.name, folder)
                 continue
             backups.append(BackupFolder(os.path.join(self.destination,
