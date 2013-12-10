@@ -294,13 +294,13 @@ def run(config_file):
         if not os.path.exists(conf_mountpoint_ro):
             logger.critical("Path of \"mountpoint_ro\" does not exist. "
                             "Aborting.")
-            sys.exit()
+            sys.exit(const.EXIT_MOUNTPOINT_DOES_NOT_EXIST)
         if conf_mountpoint_create and not os.path.exists(conf_mountpoint):
             logger.debug("Mountpoint does not exist, will be created.")
             os.mkdir(conf_mountpoint)
         if not os.path.exists(conf_mountpoint):
-            logger.critical("Path of \"mountpoint\" does not exist. Aborting")
-            sys.exit()
+            logger.critical("Path of \"mountpoint\" does not exist. Aborting.")
+            sys.exit(const.EXIT_MOUNTPOINT_DOES_NOT_EXIST)
 
         if conf_partition.startswith('UUID'):
             uuid = conf_partition.split('=')[1]
