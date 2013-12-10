@@ -1,0 +1,58 @@
+Two problems regarding the backup folders:
+
+1) When the backup process is interrupted, the backup will remain unfinished but
+   will seen a finished at the next start of the program, which leads to an
+   potential unwanted full backup when the unfinished backup is used as link
+   dest.
+
+2) Backup information is derived from the folder name, which is quite limited
+   inflexible.
+
+Both of these can be remedied by placing a special "backup info" file into the
+directory. When this is done after the backup is finished, it can be used as a
+marker for valid backups. When the file does not exist, the backup can easily be
+identified as unfinished. We can even go so far as to say that a folder lacking
+this file can be ignored completely.
+
+This file can also conveniently be used to story meta information about the
+backup. We can use the rbackupd.config module to parse this file for maximum
+flexibility, or use a simple char separated format.
+
+Proposal for the file naming and content:
+
+Name: rbackupd.info
+
+Content:
+<name>
+<date>
+<interval name>
+
+<date> should be easily parsable, so we can use datetime.timestamp() and
+datetime.fromtimestamp().
+
+One problem arises: We can no longer use symlinks on the topmost repository
+level, as the meta information is no longer stored in the folder name but in the
+folder itself, so symlinks would inherit the information of their target.
+Therefore, we need to create the symlinks "one level deeper". The content of the
+backup folder is on the one hand the rbackupd.info file and on the other hand a
+folder containing the backup itself, let's just call it "backup".
+
+We can still keep the naming of the backup folder, as it makes for easier
+sorting and identifying of the different backups, but we do no longer use the
+name itself to hold the information but the rbackupd.info file.
+
+The resulting structure would look something like this:
+
+repo --+-- name_date_interval.snapshot --+-- rbackupd.info
+       |                                 |
+       |                                 +-- backup --+-- home
+       |                                              |
+       |                                              +-- etc
+       |                                              .
+       |                                              .
+       |
+       +-- name_date_interval.snapshot --+-- rbackupd.info
+       |                                 |
+       |                                 +-- backup -> ../[...]/backup (symlink)
+       .
+       .

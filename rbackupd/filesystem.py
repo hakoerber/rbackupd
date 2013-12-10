@@ -22,7 +22,8 @@ Module to handle partitions and mountpoints.
 
 import logging
 import os
-import subprocess
+
+from . import cmd
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +105,8 @@ class Partition(object):
         args.append(mountpoint.path)
         logger.verbose("Executing \"%s\".", " ".join(args))
         try:
-            subprocess.check_output(args)
-        except subprocess.CalledProcessError:
+            cmd.check_output(args)
+        except cmd.CalledProcessError:
             raise
 
 
@@ -140,8 +141,8 @@ class Mountpoint(object):
                 self.path]
         logger.verbose("Executing \"%s\".", " ".join(args))
         try:
-            subprocess.check_output(args)
-        except subprocess.CalledProcessError as err:
+            cmd.check_output(args)
+        except cmd.CalledProcessError as err:
             raise
 
     def bind(self, target):
@@ -160,6 +161,6 @@ class Mountpoint(object):
                 target.path]
         logger.verbose("Executing \"%s\".", " ".join(args))
         try:
-            subprocess.check_output(args)
-        except subprocess.CalledProcessError as err:
+            cmd.check_output(args)
+        except cmd.CalledProcessError as err:
             raise

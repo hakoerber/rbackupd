@@ -23,18 +23,19 @@ arguments of rsync for ease of use.
 
 import logging
 import os
-import subprocess
+
+from . import cmd
 
 logger = logging.getLogger(__name__)
 
 
-def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
+def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
           loggingOptions):
     """
     Runs the rsync command with specific parameters.
-    :param cmd: The exact command to execute. Just use "rsync" to search for
-    the rsync executable in PATH
-    :type cmd: string
+    :param command: The exact command to execute. Just use "rsync" to search
+    for the rsync executable in PATH
+    :type command: string
     :param source: The path to the source of the transfer.
     :type source: string
     :param destination: The path to the destination of the transfer.
@@ -52,7 +53,7 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     :param loggingOptions: A LogfileOptions instance containing information
     about the logging rsync will do.
     """
-    args = [cmd]
+    args = [command]
 
     args.extend(rsyncfilter.get_args())
 
@@ -75,9 +76,9 @@ def rsync(cmd, source, destination, link_ref, arguments, rsyncfilter,
     # create the directory first, otherwise logging will fail
     os.mkdir(destination)
 
-    proc = subprocess.Popen(args,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    proc = cmd.Popen(args,
+                     stdout=cmd.PIPE,
+                     stderr=cmd.PIPE)
     (stdoutdata, stderrdata) = proc.communicate()
     return (proc.returncode, stdoutdata, stderrdata)
 

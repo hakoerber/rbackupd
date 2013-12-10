@@ -22,3 +22,13 @@ v0.3 - *2013-11-25*
 + [NEW] Logging implemented.
 
 + [FIXED] The [mount] section can now be omitted when no mounting should be done.
+
+v0.4 - *2013-12-10*
+-------------------
+
++ [NEW] Log messages added and extended.
+
++ [CHANGED] The backup folder structure is now more flexible.
++ [CHANGED] The options for overlapping backups were dropped, backups are now always symlinked together.
+
++ [FIXED] Serious bug that might wrongly delete backups in december.

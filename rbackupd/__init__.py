@@ -21,8 +21,6 @@ import datetime
 import logging
 import logging.handlers
 import os
-import re
-import subprocess
 import sys
 import time
 
@@ -84,7 +82,7 @@ def set_up_logging(console_loglevel, logfile_loglevel):
 
     global logfile_formatter
     logfile_formatter = logging.Formatter(
-        fmt="[{asctime},{msecs}] [{levelname}] {filename}: {message}",
+        fmt="[{asctime}] [{levelname}] {filename}: {message}",
         datefmt="%Y-%m-%d %H:%M:%S",
         style='{')
 
@@ -93,22 +91,31 @@ def set_up_logging(console_loglevel, logfile_loglevel):
     logger.addHandler(logging_memory_handler)
 
     logging_file_handlers.append(logging_memory_handler)
+    logger.debug("Logging setup completed.")
 
 
 def change_console_logging_level(loglevel):
+    logger.debug("Changing logging level for console to \"%s\".",
+                 logging.getLevelName(loglevel))
     for handler in logging_console_handlers:
         handler.setLevel(loglevel)
 
 
 def change_file_logging_level(loglevel):
+    logger.debug("Changing logging level for log file to \"%s\".",
+                 logging.getLevelName(loglevel))
     for handler in logging_file_handlers:
         handler.setLevel(loglevel)
 
 
 def change_to_logfile_logging(logfile_path, loglevel):
+    logger.debug("Switching from logging to memory to logging to file at "
+                 "\"%s\" with level \"%s\".",
+                 logfile_path,
+                 logging.getLevelName(loglevel))
     global logging_memory_handler
     if logging_memory_handler is None:
-        pass
+        return
 
     logfile_handler = logging.handlers.RotatingFileHandler(
         logfile_path,
@@ -130,6 +137,7 @@ def change_to_logfile_logging(logfile_path, loglevel):
     logger.removeHandler(logging_memory_handler)
     logging_file_handlers.remove(logging_memory_handler)
     logging_memory_handler = None
+    logger.debug("Successfully switched to file logging.")
 
 
 def main(config_file, console_loglevel):
@@ -137,9 +145,11 @@ def main(config_file, console_loglevel):
         change_console_logging_level(console_loglevel)
         run(config_file)
     except KeyboardInterrupt:
+        logger.debug("Caught KeyboardInterrupt")
         logger.info("Keyboard interrupt.")
         sys.exit(const.EXIT_KEYBOARD_INTERRUPT)
     except SystemExit as err:
+        logger.debug("Caught SystemExit")
         logger.info("Exiting with code %s.", err.code)
         sys.exit(err.code)
 
@@ -153,6 +163,7 @@ def run(config_file):
             logger.critical("Invalid config file. Aborting.")
             sys.exit(const.EXIT_INVALID_CONFIG_FILE)
 
+    logger.debug("Starting configuration file parsing.")
     try:
         conf = config.Config(config_file)
     except config.ParseError as err:
@@ -160,6 +171,7 @@ def run(config_file):
                         err.lineno,
                         err.line,
                         err.message)
+    logger.debug("Config file parsed successfully.")
 
     # this is the [logging] section
     conf_section_logging = conf.get_section(const.CONF_SECTION_LOGGING)
@@ -186,6 +198,8 @@ def run(config_file):
 
     logfile_dir = os.path.dirname(conf_logfile_path)
     if not os.path.exists(logfile_dir):
+        logger.debug("Folder containing log file does not exist, will be "
+                     "created.")
         os.mkdir(logfile_dir)
 
     # now we can change from logging into memory to logging to the logfile
@@ -233,16 +247,13 @@ def run(config_file):
     conf_default_ssh_args = conf_section_default.get(
         const.CONF_KEY_SSH_ARGS, None)
 
-    conf_default_overlapping = conf_section_default.get(
-        const.CONF_KEY_OVERLAPPING, None)
-
     conf_sections_tasks = conf.get_sections(const.CONF_SECTION_TASK)
 
     if conf_sections_mounts is None:
         conf_sections_mounts = []
 
     for mount in conf_sections_mounts:
-        if len(mount) == 0:
+        if mount is None or len(mount) == 0:
             continue
 
         conf_partition = mount[const.CONF_KEY_PARTITION][0]
@@ -277,16 +288,19 @@ def run(config_file):
 
         if (conf_mountpoint_ro is not None and conf_mountpoint_ro_create and
                 not os.path.exists(conf_mountpoint_ro)):
+            logger.debug("Readonly mountpoint does not exist, will be "
+                         "created.")
             os.mkdir(conf_mountpoint_ro)
         if not os.path.exists(conf_mountpoint_ro):
             logger.critical("Path of \"mountpoint_ro\" does not exist. "
                             "Aborting.")
-            sys.exit()
+            sys.exit(const.EXIT_MOUNTPOINT_DOES_NOT_EXIST)
         if conf_mountpoint_create and not os.path.exists(conf_mountpoint):
+            logger.debug("Mountpoint does not exist, will be created.")
             os.mkdir(conf_mountpoint)
         if not os.path.exists(conf_mountpoint):
-            logger.critical("Path of \"mountpoint\" does not exist. Aborting")
-            sys.exit()
+            logger.critical("Path of \"mountpoint\" does not exist. Aborting.")
+            sys.exit(const.EXIT_MOUNTPOINT_DOES_NOT_EXIST)
 
         if conf_partition.startswith('UUID'):
             uuid = conf_partition.split('=')[1]
@@ -313,6 +327,8 @@ def run(config_file):
                 path=conf_mountpoint_ro,
                 options=conf_mountpoint_ro_options)
             try:
+                logger.debug("Mounting readonly mountpoint %s",
+                             mountpoint_ro.path)
                 partition.mount(mountpoint_ro)
             except filesystem.MountpointInUseError as err:
                 logger.warning("Mountpoint \"%s\" already in use. "
@@ -369,18 +385,9 @@ def run(config_file):
             const.CONF_KEY_SSH_ARGS, conf_default_ssh_args)
         conf_ssh_args = const.SSH_CMD + " " + " ".join(conf_ssh_args)
 
-        conf_overlapping = task.get(
-            const.CONF_KEY_OVERLAPPING, conf_default_overlapping)[0]
-
         # these are the options that are not given in the [default] section.
         conf_destination = task[const.CONF_KEY_DESTINATION][0]
         conf_sources = task[const.CONF_KEY_SOURCE]
-
-        if conf_overlapping not in ["single", "hardlink", "symlink"]:
-            logger.critical("Invalid value for key \"overlapping\": %s"
-                            "Valid values: \"single\", \"hardlink\", "
-                            "\"symlink\". Aborting.", conf_overlapping)
-            sys.exit(EXIT_INVALID_CONFIG_FILE)
 
         # now we can check the values
         if not os.path.exists(conf_destination):
@@ -450,6 +457,14 @@ def run(config_file):
         conf_task_keeps = task[const.CONF_KEY_KEEP]
         conf_task_keep_age = task[const.CONF_KEY_KEEP_AGE]
 
+        for (interval_name, keep_count) in conf_task_keeps.items():
+            if keep_count <= 0:
+                logger.critical("Maximum backup count must be greater than "
+                                "zero, %s found for interval \"%s\".",
+                                keep_count,
+                                interval_name)
+                sys.exit(const.EXIT_INVALID_CONFIG_FILE)
+
         task_keep_age = collections.OrderedDict()
         for (backup_interval, max_age) in conf_task_keep_age.items():
             task_keep_age[backup_interval] = \
@@ -464,10 +479,12 @@ def run(config_file):
                                   task_keep_age,
                                   conf_rsyncfilter,
                                   conf_rsync_logfile_options,
-                                  conf_rsync_args))
+                                  conf_rsync_args,
+                                  conf_rsync_cmd))
 
     while True:
         start = datetime.datetime.now()
+        logger.debug("Starting cycle.")
         for repo in repositories:
 
             for (backup_interval, max_age) in conf_task_keep_age.items():
@@ -475,9 +492,8 @@ def run(config_file):
                     interval.interval_to_oldest_datetime(max_age)
             repo.keep_age = task_keep_age
 
-            create_backups_if_necessary(repo, conf_overlapping,
-                                        conf_rsync_cmd)
-            handle_expired_backups(repo, start)
+            repo.create_backups_if_necessary(timestamp=start)
+            repo.handle_expired_backups(timestamp=start)
 
         # we have to get the current time again, as the above might take a lot
         # of time
@@ -487,152 +503,8 @@ def run(config_file):
         else:
             nextmin = now.replace(minute=now.minute+1, second=0, microsecond=0)
             wait_seconds = (nextmin - now).seconds + 1
+        logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
         time.sleep(wait_seconds)
-
-
-def create_backups_if_necessary(repository, conf_overlapping, conf_rsync_cmd):
-    necessary_backups = repository.get_necessary_backups()
-    if len(necessary_backups) != 0:
-        if conf_overlapping == "single":
-            new_backup_interval_name = None
-            exitloop = False
-            for (name, _) in repository.intervals:
-                for (backup_name, _) in necessary_backups:
-                    if name == backup_name:
-                        new_backup_interval_name = name
-                        exitloop = True
-                        break
-                if exitloop:
-                    break
-            new_backup = repository.get_backup_params(new_backup_interval_name)
-            create_backup(new_backup, conf_rsync_cmd)
-
-        else:
-            # Make one "real" backup and just hard/symlink all others to this
-            # one
-            timestamp = datetime.datetime.now()
-            real_backup = repository.get_backup_params(necessary_backups[0][0],
-                                                       timestamp=timestamp)
-            create_backup(real_backup, conf_rsync_cmd)
-            for backup in necessary_backups[1:]:
-                backup = repository.get_backup_params(backup[0], timestamp)
-                # real_backup.destination and backup.destination are guaranteed
-                # to be identical as they are from the same repository
-                source = os.path.join(real_backup.destination,
-                                      real_backup.folder)
-                destination = os.path.join(real_backup.destination,
-                                           backup.folder)
-                if conf_overlapping == "hardlink":
-                    logger.info("Hardlinking snapshot \"%s\" into \"%s\"",
-                                os.path.basename(source),
-                                os.path.basename(destination))
-                    files.copy_hardlinks(source, destination)
-                elif conf_overlapping == "symlink":
-                    # We should create RELATIVE symlinks with "-r", as the
-                    # repository might move, but the relative location of all
-                    # backups will stay the same
-                    logger.info("Symlinking \"%s\" to \"%s\"",
-                                os.path.basename(source),
-                                os.path.basename(destination))
-                    files.create_symlink(source, destination)
-    else:
-        logger.info("No backup necessary.")
-
-
-def create_backup(new_backup, rsync_cmd):
-    destination = os.path.join(new_backup.destination,
-                               new_backup.folder)
-    symlink_latest = os.path.join(new_backup.destination,
-                                  const.SYMLINK_LATEST_NAME)
-    for source in new_backup.sources:
-        if new_backup.link_ref is None:
-            link_dest = None
-        else:
-            link_dest = os.path.join(new_backup.destination,
-                                     new_backup.link_ref)
-        logger.info("Creating backup \"%s\".", os.path.basename(destination))
-        (returncode, stdoutdata, stderrdata) = rsync.rsync(
-            rsync_cmd,
-            source,
-            destination,
-            link_dest,
-            new_backup.rsync_args,
-            new_backup.rsyncfilter,
-            new_backup.rsync_logfile_options)
-        if returncode != 0:
-            logger.critical("Rsync failed. Aborting. Stderr:\n%s", stderrdata)
-            sys.exit(const.EXIT_RSYNC_FAILED)
-        else:
-            logger.info("Backup finished successfully.")
-    if os.path.islink(symlink_latest):
-        files.remove_symlink(symlink_latest)
-    files.create_symlink(destination, symlink_latest)
-
-
-def handle_expired_backups(repository, current_time):
-    expired_backups = repository.get_expired_backups()
-    if len(expired_backups) > 0:
-        for expired_backup in expired_backups:
-            # as a backup might be a symlink to another backup, we have to
-            # consider: when it is a symlink, just remove the symlink. if not,
-            # other backupSSS!! might be a symlink to it, so we have to check
-            # all other backups. we overwrite one symlink with the backup and
-            # update all remaining symlinks
-            logger.info("Expired backup: \"%s\".",
-                        expired_backup.name)
-            expired_path = os.path.join(repository.destination,
-                                        expired_backup.name)
-            if os.path.islink(expired_path):
-                logger.info("Removing symlink \"%s\".",
-                            os.path.basename(expired_path))
-                files.remove_symlink(expired_path)
-            else:
-                symlinks = []
-                for backup in repository.backups:
-                    backup_path = os.path.join(repository.destination,
-                                               backup.name)
-                    if (os.path.samefile(expired_path,
-                                         os.path.realpath(backup_path))
-                            and os.path.islink(backup_path)):
-                        symlinks.append(backup)
-
-                if len(symlinks) == 0:
-                    # just remove the backups, no symlinks present
-                    logger.info("Removing directory \"%s\".",
-                                expired_backup.name)
-                    files.remove_recursive(os.path.join(
-                        repository.destination, expired_backup.name))
-                else:
-                    # replace the first symlink with the backup
-                    symlink_path = os.path.join(repository.destination,
-                                                symlinks[0].name)
-                    logger.info("Removing symlink \"%s\".",
-                                os.path.basename(symlink_path))
-                    files.remove_symlink(symlink_path)
-
-                    # move the real backup over
-
-                    logger.info("Moving \"%s\" to \"%s\".",
-                                os.path.basename(expired_path),
-                                os.path.basename(symlink_path))
-                    files.move(expired_path, symlink_path)
-
-                    # now update all symlinks to the directory
-                    for remaining_symlink in symlinks[1:]:
-                        remaining_symlink_path = os.path.join(
-                            repository.destination,
-                            remaining_symlink.name)
-                        logger.info("Removing symlink \"%s\".",
-                                    os.path.basename(remaining_symlink_path))
-                        files.remove_symlink(remaining_symlink_path)
-                        logger.info("Creating symlink \"%s\" pointing to "
-                                    "\"%s\".",
-                                    os.path.basename(remaining_symlink_path),
-                                    os.path.basename(symlink_path))
-                        files.create_symlink(symlink_path,
-                                             remaining_symlink_path)
-    else:
-        logger.info("No expired backups.")
 
 
 logger = logging.getLogger(__name__)
@@ -649,4 +521,4 @@ logging.Logger.verbose = \
     obj.log(logging.VERBOSE, msg, *args, **kwargs)
 
 set_up_logging(console_loglevel=logging.INFO,
-               logfile_loglevel=logging.VERBOSE)
+               logfile_loglevel=logging.DEBUG)

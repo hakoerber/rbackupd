@@ -29,7 +29,7 @@ import rbackupd
 DEFAULT_PATH_CONFIG = "/etc/rbackupd/rbackupd.conf"
 
 usage = "%prog [options]"
-version = "%prog v0.3"
+version = "%prog v0.4"
 
 def main():
     parser = optparse.OptionParser(usage=usage, version=version)
