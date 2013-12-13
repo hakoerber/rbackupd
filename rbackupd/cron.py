@@ -51,8 +51,8 @@ _name_mapping = ({},
 class Cronjob(object):
     """
     Represents a single cronjob schedule. It will not execute any code, but
-    will provice methods to poll information about that cronjob in relation to
-    a specific time, for example whether the cronjob elapsed between to
+    will provide methods to poll information about that cronjob in relation to
+    a specific time, for example whether the cronjob elapsed between two
     different times and so on.
     Look here (https://en.wikipedia.org/wiki/Cron#CRON_expression) for an
     deeper insight into the formatting of a cron expression. This class does
@@ -83,10 +83,9 @@ class Cronjob(object):
     Examples:
     0 * * * * * matches the beginning of every hour.
     3,*/5 1,4 * * * * matches the third and every fifth minute beginning at 0
-      of the first and forth hour everyday..
+      of the first and forth hour everyday.
     3-59/5 2,4 * * * * does the same as above, apart from maching the third and
       every fifth minute starting at the second one instead of starting at 0.
-
 
     IMPORTANT: <weekday> is not yet supported and can be omitted. For all
     comparisons in this class, the weekday information is ignored.
@@ -130,9 +129,9 @@ class Cronjob(object):
         :returns: True if the cronjob has occured between the two datetimes,
         False otherwise.
         :rtype: bool
-        :raises: ValueError if date_time_1 is older than date_time_2
+        :raises: ValueError if date_time_2 is older than date_time_1
         """
-        if not date_time_1 <= date_time_2:
+        if date_time_2 < date_time_1:
             raise ValueError(
                 "date_time_1 has to be older than or equal to date_time_2.")
         min_val = self.get_min_time()
@@ -373,7 +372,7 @@ def _parse_expression_at_index(expression, index):
 def _parse_subexpression_at_index(expression, index):
     """
     Helper function for _parse_expression_at_index(), same signature, but only
-    works onexpressions without ","
+    works on expressions without ",".
     """
     possible_values = None
     rest = expression.strip()
@@ -394,7 +393,7 @@ def _parse_subexpression_at_index(expression, index):
     rest = parts[0]
 
     # now, everything else might be "*", "x-y" or "z", let's look for a hyphen
-    # formatters
+    # formatter
     if '-' in rest:
         parts = rest.split('-')
         if len(parts) != 2:
@@ -405,8 +404,8 @@ def _parse_subexpression_at_index(expression, index):
         if not parts[1]:
             raise ParseError(expression,
                              "Missing end value for range formatter.")
-        start, end = (_get_integer_at_index(parts[0], index),
-                      _get_integer_at_index(parts[1], index))
+        start = _get_integer_at_index(parts[0], index)
+        end = _get_integer_at_index(parts[1], index)
         if start is None:
             raise ParseError(expression,
                              "Invalid start value for range formatter.")
@@ -416,12 +415,12 @@ def _parse_subexpression_at_index(expression, index):
         if start > end:
             raise ParseError(
                 expression,
-                "Start value must be lower or equal than end value.")
+                "Start value must be lower than or equal to end value.")
         possible_values = set(range(start, end + 1))
     elif '*' == rest:
         possible_values = set(_ranges[index])
     elif _get_integer_at_index(rest, index) is not None:
-        possible_values = {_get_integer_at_index(rest, index)}
+        possible_values = set([_get_integer_at_index(rest, index)])
     else:
         raise ParseError(expression, "Invalid expression")
 
