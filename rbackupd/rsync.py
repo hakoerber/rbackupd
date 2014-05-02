@@ -23,8 +23,9 @@ arguments of rsync for ease of use.
 
 import logging
 import os
+import shlex
 
-from . import cmd
+from rbackupd import cmd
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +58,15 @@ def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
 
     args.extend(rsyncfilter.get_args())
 
-    args.extend(arguments)
+    args.extend(shlex.split(arguments))
 
     if link_ref is not None:
         args.append("--link-dest=%s" % link_ref)
 
+
     if loggingOptions is not None:
-        args.append("--log-file=%s" % os.path.join(destination,
-                                                   loggingOptions.log_name))
+        log_path = os.path.join(destination, "..", loggingOptions.log_name)
+        args.append("--log-file=%s" % log_path)
         if loggingOptions.log_format is not None:
             args.append("--log-file-format=%s" % loggingOptions.log_format)
 

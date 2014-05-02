@@ -23,6 +23,14 @@ import sys
 logger = logging.getLogger(__name__)
 
 
+class Interval(object):
+    def __init__(self, interval_string):
+        self.interval_string = interval_string
+
+    def get_oldest_datetime(self):
+        return interval_to_oldest_datetime(self.interval_string)
+
+
 def interval_to_oldest_datetime(interval):
     result = datetime.datetime.now()
     suffix = interval[-1:]
