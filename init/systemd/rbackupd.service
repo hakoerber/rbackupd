@@ -1,0 +1,9 @@
+[Unit]
+Description=rbackupd backup daemon
+
+[Service]
+Type=dbus
+BusName=org.rbackupd.daemon
+ExecStart=/usr/bin/rbackupd
+
+
