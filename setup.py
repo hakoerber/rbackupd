@@ -21,6 +21,7 @@ setup(
       data_files = [
           ('/etc/rbackupd', ['conf/rbackupd.conf']),
           ('/usr/share/rbackupd', ['conf/scheme.ini']),
+          ('/etc/dbus-1/system.d/', ['other/dbus/rbackupd.conf'])
           ],
       requires = ['configobj'],
 
