@@ -18,8 +18,11 @@ setup(
 
       packages = ['rbackupd'],
       scripts = ['scripts/rbackupd'],
-      data_files = [('/etc/rbackupd/', ['conf/rbackupd.conf'])],
-      requires = [],
+      data_files = [
+          ('/etc/rbackupd', ['conf/rbackupd.conf']),
+          ('/usr/share/rbackupd', ['conf/scheme.ini']),
+          ],
+      requires = ['configobj'],
 
       classifiers = [
           'Development Status :: 2 - Pre-Alpha',

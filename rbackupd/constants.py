@@ -20,8 +20,6 @@
 CONF_SECTION_LOGGING = "logging"
 CONF_KEY_LOGFILE_PATH = "logfile"
 CONF_KEY_LOGLEVEL = "loglevel"
-CONF_VALUES_LOGLEVEL = ("quiet", "default", "verbose", "debug")
-
 CONF_SECTION_RSYNC = "rsync"
 CONF_KEY_RSYNC_CMD = "cmd"
 
@@ -34,27 +32,27 @@ CONF_KEY_MOUNTPOINT_RO_OPTIONS = "mountpoint_options"
 CONF_KEY_MOUNTPOINT_CREATE = "mountpoint_create"
 CONF_KEY_MOUNTPOINT_RO_CREATE = "mountpoint_ro_create"
 
-CONF_SECTION_DEFAULT = "default"
 CONF_KEY_RSYNC_LOGFILE = "rsync_logfile"
 CONF_KEY_RSYNC_LOGFILE_NAME = "rsync_logfile_name"
 CONF_KEY_RSYNC_LOGFILE_FORMAT = "rsync_logfile_format"
-CONF_KEY_FILTER_PATTERNS = "filter"
-CONF_KEY_INCLUDE_PATTERNS = "include"
-CONF_KEY_EXCLUDE_PATTERNS = "exclude"
-CONF_KEY_INCLUDE_FILE = "includefile"
-CONF_KEY_EXCLUDE_FILE = "excludefile"
+CONF_KEY_FILTER_PATTERNS = "filters"
+CONF_KEY_INCLUDE_PATTERNS = "includes"
+CONF_KEY_EXCLUDE_PATTERNS = "excludes"
+CONF_KEY_INCLUDE_FILE = "includefiles"
+CONF_KEY_EXCLUDE_FILE = "excludefiles"
 CONF_KEY_CREATE_DESTINATION = "create_destination"
 CONF_KEY_ONE_FILESYSTEM = "one_fs"
 CONF_KEY_RSYNC_ARGS = "rsync_args"
 CONF_KEY_SSH_ARGS = "ssh_args"
 
-CONF_SECTION_TASK = "task"
+CONF_SECTION_TASKS = "tasks"
 CONF_KEY_DESTINATION = "destination"
-CONF_KEY_SOURCE = "source"
+CONF_KEY_SOURCE = "sources"
 CONF_KEY_TASKNAME = "name"
-CONF_KEY_INTERVAL = "interval"
-CONF_KEY_KEEP = "keep"
-CONF_KEY_KEEP_AGE = "keep_age"
+
+CONF_SECTION_INTERVALS = "intervals"
+CONF_SECTION_KEEP = "keep"
+CONF_SECTION_AGE = "age"
 
 
 # Exit codes.
