@@ -22,35 +22,46 @@ import os
 import re
 import sys
 
-from . import cron
-from . import constants as const
-from . import rsync
-from . import files
+from rbackupd import cron
+from rbackupd import constants as const
+from rbackupd import rsync
+from rbackupd import files
 
 logger = logging.getLogger(__name__)
 
 
-class Repository(object):
+class Task(object):
     """
-    Represents a repository of backups, which means a collection of backups
+    Represents a task of backups, which means a collection of backups
     that are managed together. Provides methods to determine whether new
     backups are necessary and get expired backups.
     """
 
-    def __init__(self, sources, destination, name, intervals, keep, keep_age,
-                 rsyncfilter, rsync_logfile_options, rsync_args, rsync_cmd):
+    def __init__(self,
+                 name,
+                 sources,
+                 destination,
+                 scheduling_info,
+                 create_destination,
+                 one_filesystem,
+                 ssh_args,
+                 rsync_cmd,
+                 rsync_args,
+                 rsync_logfile_options,
+                 rsync_filter):
+        self.name = name
         self.sources = sources
         self.destination = destination
-        self.name = name
-        self.intervals = \
-            [BackupInterval(interval_name, cron.Cronjob(interval)) for
-             (interval_name, interval) in intervals.items()]
-        self.keep = keep
-        self.keep_age = keep_age
-        self.rsyncfilter = rsyncfilter
-        self.rsync_logfile_options = rsync_logfile_options
-        self.rsync_args = rsync_args
+        self.scheduling_info = scheduling_info
+        self.create_destination = create_destination
+        self.one_filesystem = one_filesystem
+        self.ssh_args = ssh_args
+
         self.rsync_cmd = rsync_cmd
+        self.rsync_args = rsync_args
+        self.rsync_logfile_options = rsync_logfile_options
+        self.rsync_filter = rsync_filter
+
         self._backups = self._read_backups()
 
     @property
@@ -59,16 +70,16 @@ class Repository(object):
         return self._backups
 
     def _read_backups(self):
-        logger.debug("Repository \"%s\": Reading backups.", self.name)
+        logger.debug("Task \"%s\": Reading backups.", self.name)
         backups = []
         for folder in os.listdir(self.destination):
             if folder == const.SYMLINK_LATEST_NAME:
-                logger.debug("Repository \"%s\": Ignoring latest symlink "
+                logger.debug("Task \"%s\": Ignoring latest symlink "
                              "\"%s\".", self.name, folder)
                 continue
             backups.append(BackupFolder(os.path.join(self.destination,
                                                      folder)))
-        logger.debug("Repository \"%s\": Found the following folders: %s.",
+        logger.debug("Task \"%s\": Found the following folders: %s.",
                      self.name,
                      backups)
         backups = [backup for backup in backups if backup.is_finished()]
@@ -84,7 +95,7 @@ class Repository(object):
 
     def _register_backup(self, backup):
         assert(self._backups is not None)
-        logger.debug("Repository \"%s\": Registering backup \"%s\".",
+        logger.debug("Task \"%s\": Registering backup \"%s\".",
                      self.name, backup.name)
         self._backups.append(backup)
 
@@ -92,39 +103,86 @@ class Repository(object):
         assert(self._backups is not None)
         if backup not in self._backups:
             raise ValueError("backup not found")
-        logger.debug("Repository \"%s\": Unregistering backup \"%s\".",
+        logger.debug("Task \"%s\": Unregistering backup \"%s\".",
                      self.name, backup.name)
         self._backups.remove(backup)
 
-    def get_necessary_intervals(self):
+    def _get_necessary_interval_infos(self):
         """
         Returns all backups deemed necessary.
-        :returns: A list of tuples containing all necessary backups, each tuple
-        consisting of the interval name as first and the interval cron object
-        as second element.
-        :returns: All backups deemed necessary.
-        :rtype: list of tuples.
+        :rtype: list of IntervalInfos.
         """
         necessary_backups = []
-        for interval in self.intervals:
-            logger.debug("Repository \"%s\": Checking interval \"%s\" for "
+        for interval_info in self.scheduling_info.interval_infos:
+            logger.debug("Task \"%s\": Checking interval \"%s\" for "
                          "necessary backups.",
                          self.name,
-                         interval.name)
-            latest_backup = self._get_latest_backup_of_interval(interval.name)
+                         interval_info.name)
+            latest_backup = self._get_latest_backup_of_interval(interval_info)
             if latest_backup is None:
-                logger.debug("Repository \"%s\": Backup necessary as no other "
+                logger.debug("Task \"%s\": Backup necessary as no other "
                              "backups of that interval are present.",
                              self.name)
-                necessary_backups.append(interval)
+                necessary_backups.append(interval_info)
                 continue
-            if interval.cronjob.has_occured_since(latest_backup.date,
-                                                  include_start=False):
-                logger.debug("Repository \"%s\": Backup necessary as interval "
+            if interval_info.cronjob.has_occured_since(latest_backup.date,
+                                                       include_start=False):
+                logger.debug("Task \"%s\": Backup necessary as interval "
                              "occured since latest backup.",
                              self.name)
-                necessary_backups.append(interval)
+                necessary_backups.append(interval_info)
         return necessary_backups
+
+
+    def create_backups_if_necessary(self, timestamp):
+        """
+        Checks whether a backups are necessary and creates them.
+        :param timestamp: The timestamp all potentially created backups will be
+        assigned.
+        :type timestamp: datetime.datetime instance
+        """
+        necessary_interval_infos = self._get_necessary_interval_infos()
+        if len(necessary_interval_infos) == 0:
+            logger.verbose("No backup necessary.")
+            return
+
+        interval_info = necessary_interval_infos[0]
+
+        new_folder_name = const.PATTERN_BACKUP_FOLDER % (
+            self.name,
+            timestamp.strftime(const.DATE_FORMAT),
+            interval_info.name)
+
+        new_backup = BackupFolder(os.path.join(
+            self.destination, new_folder_name))
+
+        params = self.get_backup_params(interval_info)
+        new_backup.set_meta_data(name=new_folder_name,
+                                 date=timestamp,
+                                 interval=interval_info.name)
+        new_backup.prepare()
+        self.create_backup(new_backup, params)
+        new_backup.write_meta_file()
+        self._register_backup(new_backup)
+
+        for interval_info in necessary_interval_infos[1:]:
+            symlink_name = const.PATTERN_BACKUP_FOLDER % (
+                self.name,
+                timestamp.strftime(const.DATE_FORMAT),
+                interval_info.name)
+
+            symlink_backup = BackupFolder(os.path.join(
+                self.destination, symlink_name))
+            symlink_backup.set_meta_data(name=symlink_name,
+                                         date=timestamp,
+                                         interval=interval_info.name)
+            symlink_backup.prepare()
+            self._symlink_backup_subfolders(new_backup, symlink_backup)
+            symlink_backup.write_meta_file()
+            self._register_backup(symlink_backup)
+
+
+
 
     def get_backup_params(self, new_backup_interval_name):
         """
@@ -136,64 +194,21 @@ class Repository(object):
         backup.
         :rtype: BackupParameters instance
         """
-        logger.debug("Repository \"%s\": Getting parameters of new backup.",
+        logger.debug("Task \"%s\": Getting parameters of new backup.",
                      self.name)
         new_link_ref = self._get_latest_backup()
-        logger.debug("Link-ref of new backup: \"%s\"", new_link_ref)
+        if new_link_ref is not None:
+            logger.debug("Link-ref of new backup: \"%s\"", new_link_ref.backup_path)
+        else:
+            logger.debug("No link ref as no old backup found.")
         backup_params = BackupParameters(
             link_ref=new_link_ref,
             rsync_cmd=self.rsync_cmd,
             rsync_args=self.rsync_args,
-            rsync_filter=self.rsyncfilter,
+            rsync_filter=self.rsync_filter,
             rsync_logfile_options=self.rsync_logfile_options)
         return backup_params
 
-    def create_backups_if_necessary(self, timestamp):
-        """
-        Checks whether a backups are necessary and creates them.
-        :param timestamp: The timestamp all potential backups created will be
-        assigned.
-        :type timestamp: datetime.datetime instance
-        """
-        necessary_intervals = self.get_necessary_intervals()
-        if len(necessary_intervals) == 0:
-            logger.verbose("No backup necessary.")
-            return
-
-        interval = necessary_intervals[0]
-
-        new_folder_name = const.PATTERN_BACKUP_FOLDER % (
-            self.name,
-            timestamp.strftime(const.DATE_FORMAT),
-            interval.name)
-
-        new_backup = BackupFolder(os.path.join(
-            self.destination, new_folder_name))
-
-        params = self.get_backup_params(interval)
-        new_backup.set_meta_data(name=new_folder_name,
-                                 date=timestamp,
-                                 interval=interval.name)
-        new_backup.prepare()
-        self.create_backup(new_backup, params)
-        new_backup.write_meta_file()
-        self._register_backup(new_backup)
-
-        for interval in necessary_intervals[1:]:
-            symlink_name = const.PATTERN_BACKUP_FOLDER % (
-                self.name,
-                timestamp.strftime(const.DATE_FORMAT),
-                interval.name)
-
-            symlink_backup = BackupFolder(os.path.join(
-                self.destination, symlink_name))
-            symlink_backup.set_meta_data(name=symlink_name,
-                                         date=timestamp,
-                                         interval=interval.name)
-            symlink_backup.prepare()
-            self._symlink_backup_subfolders(new_backup, symlink_backup)
-            symlink_backup.write_meta_file()
-            self._register_backup(symlink_backup)
 
     def create_backup(self, new_backup, params):
         destination = new_backup.backup_path
@@ -223,39 +238,31 @@ class Repository(object):
 
     def get_expired_backups(self, timestamp):
         """
-        Returns all backups that are expired in the repository.
+        Returns all backups that are expired in the task.
         :returns: All expired backups.
         :rtype: list of Backup instances
         """
         # we will sort the folders and just loop from oldest to newest until we
         # have enough expired backups.
         expired_backups = []
-        for interval in self.intervals:
-            logger.debug("Repository \"%s\": Checking interval \"%s\" for "
+        for interval_info in self.scheduling_info.interval_infos:
+            logger.debug("Task \"%s\": Checking interval \"%s\" for "
                          "expired backups.",
                          self.name,
-                         interval.name)
-
-            if interval.name not in self.keep:
-                logger.critical("No corresponding interval found for keep "
-                                "value \"%s\"", interval.name)
-                sys.exit(9)
-
-            if interval.name not in self.keep_age:
-                logger.critical("No corresponding age interval found of keep "
-                                "value \"%s\"", interval.name)
-                sys.exit(10)
+                         interval_info.name)
 
             backups_of_that_interval = [backup for backup in self.backups if
-                                        backup.interval_name == interval.name]
+                                        backup.interval_name == interval_info.name]
 
             expired_backups.extend(
-                self._get_expired_backups_by_count(backups_of_that_interval,
-                                                   self.keep[interval.name]))
+                self._get_expired_backups_by_count(
+                    backups_of_that_interval,
+                    self.scheduling_info.get_info_by_name(interval_info.name).keep_count))
             expired_backups.extend(
-                self._get_expired_backups_by_age(backups_of_that_interval,
-                                                 self.keep_age[interval.name],
-                                                 timestamp))
+                self._get_expired_backups_by_age(
+                    backups_of_that_interval,
+                    self.scheduling_info.get_info_by_name(interval_info.name).keep_age,
+                    timestamp))
 
         return expired_backups
 
@@ -401,13 +408,44 @@ class Repository(object):
             return None
         latest = None
         for backup in self.backups:
-            if latest is None and backup.interval_name == interval:
+            if latest is None and backup.interval_name == interval.name:
                 latest = backup
             elif latest is not None:
-                if (backup.interval_name == interval and
+                if (backup.interval_name == interval.name and
                         backup.date > latest.date):
                     latest = backup
         return latest
+
+
+class IntervalInfo(object):
+
+    def __init__(self, name, cron_pattern, keep_count, keep_age):
+        self.name = name
+        self.cronjob = cron.Cronjob(cron_pattern)
+        self.keep_count = keep_count
+        self._keep_age = keep_age
+
+    @property
+    def keep_age(self):
+        return self._keep_age.get_oldest_datetime()
+
+
+
+class BackupSchedulingInfo(object):
+
+    def __init__(self, interval_infos=None):
+        self.interval_infos = [] if interval_infos is None else interval_infos
+
+    def append(self, interval_info):
+        if interval_info in self.interval_infos:
+            raise ValueError("interval info already in scheduling info")
+        self.interval_infos.append(interval_info)
+
+    def get_info_by_name(self, name):
+        for interval_info in self.interval_infos:
+            if interval_info.name == name:
+                return interval_info
+        raise ValueError("no interval_info with name \"%s\" found.")
 
 
 class BackupParameters(object):
@@ -510,7 +548,7 @@ class BackupMetaInfoFile(object):
     def write(self):
         logger.debug("Writing meta file \"%s\".", self.path)
         content = self._get_string()
-        logger.debug("Content to write: \"%s\".", content)
+        logger.debug("Content to write:\n\"%s\".", content)
         with open(self.path, 'w') as fd:
             fd.write(content)
 
@@ -522,7 +560,6 @@ class BackupMetaInfoFile(object):
             const.META_FILE_DATE_FORMAT)
         content[const.META_FILE_INDEX_INTERVAL] = self.interval
         ret = "\n".join([str(f) for f in content]) + "\n"
-        logger.debug("String assembled to write: \"%s\".", ret)
         return ret
 
     def exists(self):
