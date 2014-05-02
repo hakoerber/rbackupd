@@ -23,7 +23,7 @@ This module wraps frequently needed operations on files and directories.
 import logging
 import os
 
-from . import cmd
+from rbackupd import cmd
 
 logger = logging.getLogger(__name__)
 
