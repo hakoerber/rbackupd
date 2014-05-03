@@ -1,3 +1,5 @@
+INTALLING
+
 To install, just run
 
     # python setup.py install
@@ -11,6 +13,11 @@ Now look into the template configuration file located at
 Every options has a thorough description, so an initial setup should be easy.
 Modify it to your needs.
 
+
+
+
+RUNNING
+
 To run rbackupd, just execute
 
     # rbackupd
@@ -18,6 +25,40 @@ To run rbackupd, just execute
 This will use the configuration file at /etc/rbackupd/rbackupd.conf. If you
 want to use a different location, use the -c switch. You require root
 privileges for the program to work.
+
+There is also a systemd service file shipped with the program. If you want to
+run rbackupd as a systemd service, you can do so by executing
+
+    # systemctl enable rbackupd.service
+
+This will make sure rbackupd is executed on next boot. If you want to start it
+right away, execute
+
+    # systemctl start rbackupd.service
+
+With this method rbackupd will use the default configuration file at
+
+     /etc/rbackupd/rbackupd.conf
+
+If you want to use a different file, you have to edit the systemd service file
+located at
+
+    /usr/lib/systemd/system/rbackupd.service
+
+Look at the ExecStart line and add --config=<your config> at the end of it. Then
+you have to tell systemd to reload the new service file by executing
+
+    # systemctl daemon-reload
+
+If rbackupd is not running, it will use the new configuration file when it is
+started next time. If it is running, restart it by running
+
+	# systemctl restart rbackupd.service
+
+
+
+
+PACKAGES
 
 For Arch Linux users, there is a PKGBUILD available at
 
