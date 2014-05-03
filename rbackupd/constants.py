@@ -107,5 +107,5 @@ DEFAULT_PATH_CONFIG = "/etc/rbackupd/rbackupd.conf"
 DEFAULT_SCHEME_PATH = "/usr/share/rbackupd/scheme.ini"
 
 
-BUS_NAME="org.rbackupd.daemon"
-BUS_PATH="/org/rbackupd/daemon"
+DBUS_BUS_NAME = "org.rbackupd.daemon"
+DBUS_OBJECT_PATH_BACKUP_MANAGER = "/org/rbackupd/daemon"

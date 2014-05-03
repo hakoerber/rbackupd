@@ -19,7 +19,6 @@
 import datetime
 import logging
 import os
-import re
 import sys
 
 from rbackupd import cron
@@ -156,7 +155,7 @@ class Task(object):
         new_backup = BackupFolder(os.path.join(
             self.destination, new_folder_name))
 
-        params = self.get_backup_params(interval_info)
+        params = self.get_backup_params()
         new_backup.set_meta_data(name=new_folder_name,
                                  date=timestamp,
                                  interval=interval_info.name)
@@ -184,12 +183,9 @@ class Task(object):
 
 
 
-    def get_backup_params(self, new_backup_interval_name):
+    def get_backup_params(self):
         """
-        Gets the parameters for a backup of the specific interval with a given
-        timestamp.
-        :param new_backup_interval_name: The interval name of the new backup.
-        :type new_backup_interval_name: string
+        Gets the parameters for a backup.
         :returns: A BackupParameters instance with information about the new
         backup.
         :rtype: BackupParameters instance
@@ -198,7 +194,8 @@ class Task(object):
                      self.name)
         new_link_ref = self._get_latest_backup()
         if new_link_ref is not None:
-            logger.debug("Link-ref of new backup: \"%s\"", new_link_ref.backup_path)
+            logger.debug("Link-ref of new backup: \"%s\"",
+                         new_link_ref.backup_path)
         else:
             logger.debug("No link ref as no old backup found.")
         backup_params = BackupParameters(
@@ -252,16 +249,18 @@ class Task(object):
                          interval_info.name)
 
             backups_of_that_interval = [backup for backup in self.backups if
-                                        backup.interval_name == interval_info.name]
+                backup.interval_name == interval_info.name]
 
             expired_backups.extend(
                 self._get_expired_backups_by_count(
                     backups_of_that_interval,
-                    self.scheduling_info.get_info_by_name(interval_info.name).keep_count))
+                    self.scheduling_info.get_info_by_name(interval_info.name).
+                        keep_count))
             expired_backups.extend(
                 self._get_expired_backups_by_age(
                     backups_of_that_interval,
-                    self.scheduling_info.get_info_by_name(interval_info.name).keep_age,
+                    self.scheduling_info.get_info_by_name(interval_info.name).
+                        keep_age,
                     timestamp))
 
         return expired_backups
