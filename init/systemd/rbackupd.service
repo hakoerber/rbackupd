@@ -1,9 +1,15 @@
 [Unit]
-Description=rbackupd backup daemon
+Description=Backup Daemon
+
+After=remote-fs.target
+After=local-fs.target
 
 [Service]
 Type=dbus
 BusName=org.rbackupd.daemon
-ExecStart=/usr/bin/rbackupd
+ExecStart=/usr/bin/rbackupd --quiet
+ExecReload=/usr/bin/kill -HUP $MAINPID
+Restart=on-success
 
-
+[Install]
+WantedBy=multi-user.target
