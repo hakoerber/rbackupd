@@ -282,6 +282,10 @@ class BackupManager(dbus.service.Object):
         destination = task_section[const.CONF_KEY_DESTINATION]
         sources = task_section[const.CONF_KEY_SOURCE]
 
+        for pattern in filter_patterns + include_patterns + exclude_patterns:
+            if len(pattern) == 0:
+                logger.critical("Empty pattern found. Aborting.")
+                sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
 
         # now we can validate the values we got
         if not os.path.exists(destination):
