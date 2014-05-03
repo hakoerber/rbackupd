@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import optparse
+import argparse
 import sys
 import logging
 
@@ -28,64 +28,64 @@ from rbackupd import levelhandler
 logger = logging.getLogger(__name__)
 
 
-usage = "%prog [options]"
-version = "%prog v0.5-dev"
+VERSION = "%(prog)s v0.5-dev"
 
 
 
 def main(argv):
-    parser = optparse.OptionParser(usage=usage, version=version)
+    parser = argparse.ArgumentParser()
 
-    parser.add_option("-c",
-                      "--config",
-                      metavar="PATH",
-                      dest="path_config",
-                      default=const.DEFAULT_PATH_CONFIG,
-                      action="store",
-                      help="alternative configuration file [default: %s]" %
-                           const.DEFAULT_PATH_CONFIG
-                      )
+    parser.add_argument("-c",
+                        "--config",
+                        metavar="PATH",
+                        dest="path_config",
+                        default=const.DEFAULT_PATH_CONFIG,
+                        action="store",
+                        help="alternative configuration file [default: %s]" %
+                             const.DEFAULT_PATH_CONFIG
+                        )
 
-    parser.add_option("-v",
-                      "--verbose",
-                      dest="verbose",
-                      default=False,
-                      action="store_true",
-                      help="be more verbose"
-                      )
+    parser.add_argument("-v",
+                        "--verbose",
+                        dest="verbose",
+                        default=False,
+                        action="store_true",
+                        help="be more verbose"
+                        )
 
-    parser.add_option("-q",
-                      "--quiet",
-                      dest="quiet",
-                      default=False,
-                      action="store_true",
-                      help="only show warnings and errors"
-                      )
+    parser.add_argument("-q",
+                        "--quiet",
+                        dest="quiet",
+                        default=False,
+                        action="store_true",
+                        help="only show warnings and errors"
+                        )
 
-    parser.add_option("--debug",
-                      dest="debug",
-                      default=False,
-                      action="store_true",
-                      help="enable debug output"
-                      )
+    parser.add_argument("--debug",
+                        dest="debug",
+                        default=False,
+                        action="store_true",
+                        help="enable debug output"
+                        )
 
-    (options, args) = parser.parse_args(argv)
+    parser.add_argument("--version",
+                        action="version",
+                        version=VERSION)
 
-    if len(args) != 0:
-        parser.error("no arguments expected")
+    commandline = parser.parse_args(argv)
 
-    if options.debug:
+    if commandline.debug:
         loglevel = logging.DEBUG
-    elif options.verbose:
+    elif commandline.verbose:
         loglevel = logging.VERBOSE
-    elif options.quiet:
+    elif commandline.quiet:
         loglevel = logging.WARNING
     else:
         loglevel = logging.INFO
 
     try:
         logging.change_console_logging_level(loglevel)
-        manager = backupmanager.BackupManager(options.path_config)
+        manager = backupmanager.BackupManager(commandline.path_config)
         manager.start()
     except KeyboardInterrupt:
         logger.debug("Caught KeyboardInterrupt")
