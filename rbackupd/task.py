@@ -209,26 +209,25 @@ class Task(object):
 
     def create_backup(self, new_backup, params):
         destination = new_backup.backup_path
-        for source in self.sources:
-            if params.link_ref is None:
-                link_dest = None
-            else:
-                link_dest = params.link_ref.backup_path
-            logger.info("Creating backup \"%s\".", new_backup.name)
-            (returncode, stdoutdata, stderrdata) = rsync.rsync(
-                command=params.rsync_cmd,
-                source=source,
-                destination=destination,
-                link_ref=link_dest,
-                arguments=params.rsync_args,
-                rsyncfilter=params.rsync_filter,
-                loggingOptions=params.rsync_logfile_options)
-            if returncode != 0:
-                logger.critical("Rsync failed. Aborting. Stderr:\n%s",
-                                stderrdata)
-                sys.exit(const.EXIT_RSYNC_FAILED)
-            else:
-                logger.debug("Rsync finished successfully.")
+        if params.link_ref is None:
+            link_dest = None
+        else:
+            link_dest = params.link_ref.backup_path
+        logger.info("Creating backup \"%s\".", new_backup.name)
+        (returncode, stdoutdata, stderrdata) = rsync.rsync(
+            command=params.rsync_cmd,
+            sources=self.sources,
+            destination=destination,
+            link_ref=link_dest,
+            arguments=params.rsync_args,
+            rsyncfilter=params.rsync_filter,
+            loggingOptions=params.rsync_logfile_options)
+        if returncode != 0:
+            logger.critical("Rsync failed. Aborting. Stderr:\n%s",
+                            stderrdata)
+            sys.exit(const.EXIT_RSYNC_FAILED)
+        else:
+            logger.debug("Rsync finished successfully.")
         new_backup.write_meta_file()
         logger.info("Backup finished successfully.")
         self._relink_latest_symlink(new_backup)

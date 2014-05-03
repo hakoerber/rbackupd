@@ -30,7 +30,7 @@ from rbackupd import cmd
 logger = logging.getLogger(__name__)
 
 
-def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
+def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
           loggingOptions):
     """
     Runs the rsync command with specific parameters.
@@ -70,7 +70,7 @@ def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
         if len(loggingOptions.log_format) != 0:
             args.append("--log-file-format=%s" % loggingOptions.log_format)
 
-    args.append(source)
+    args.extend(sources)
     args.append(destination)
 
     logger.verbose("Executing \"%s\".", " ".join(args))
