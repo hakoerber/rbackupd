@@ -75,9 +75,6 @@ def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
 
     logger.verbose("Executing \"%s\".", " ".join(args))
 
-    # create the directory first, otherwise logging will fail
-    os.mkdir(destination)
-
     proc = cmd.Popen(args,
                      stdout=cmd.PIPE,
                      stderr=cmd.PIPE)
