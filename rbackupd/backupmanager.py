@@ -82,9 +82,6 @@ class BackupManager(dbus.service.Object):
         logger.debug("Config file parsed successfully.")
 
 
-
-
-
     @dbus.service.method(const.DBUS_BUS_NAME)
     def write_config(self):
         """
@@ -287,6 +284,29 @@ class BackupManager(dbus.service.Object):
         sources = task_section[const.CONF_KEY_SOURCE]
 
 
+        # now we can validate the values we got
+        if not os.path.exists(destination):
+            if not create_destination:
+                logger.critical("Destination folder \"%s\" does not exist and "
+                                "shall not be created. Aborting.", destination)
+                sys.exit(const.EXIT_NO_CREATE_DESTINATION)
+            else:
+                os.mkdir(destination)
+        else:
+            if not os.path.isdir(destination):
+                logger.critical("Destination \"%s\" exists, but is not a valid "
+                                "directory.", destination)
+                sys.exit(const.EXIT_INVALID_DESTINATION)
+
+        for filter_file in zip(include_files, exclude_files):
+            if not os.path.exists(filter_file):
+                logger.critical("File \"%s\" not found. Aborting.", filter_file)
+                sys.exit(const.FILE_NOT_FOUND)
+            if not os.path.isfile(filter_file):
+                logger.critical("File \"%s\" is not a valid file. Aborting",
+                                filter_file)
+                sys.exit(const.FILE_INVALID)
+
         backup_scheduling_info = task.BackupSchedulingInfo()
         # these are the subsection of the task that contain scheduling
         # information we need to preserve order of the entries of the
@@ -301,8 +321,16 @@ class BackupManager(dbus.service.Object):
             keep_count = int(task_section[
                 const.CONF_SECTION_KEEP][interval_name])
 
+            if keep_count <= 0:
+                logger.critical("Maximum value of key \"%s\" in section \"%s\" "
+                                "of task \"%s\" must be greater that zero.", 
+                                interval_name,
+                                const.CONF_SECTION_KEEP,
+                                name)
+
             keep_age = task_section[const.CONF_SECTION_AGE][interval_name]
             keep_age = interval.Interval(keep_age)
+
 
             interval_info = task.IntervalInfo(name=interval_name,
                                               cron_pattern=cron_pattern,
@@ -310,9 +338,6 @@ class BackupManager(dbus.service.Object):
                                               keep_age=keep_age)
 
             backup_scheduling_info.append(interval_info)
-
-
-
 
         rsync_logfile_options = None
         if rsync_logfile:
@@ -431,110 +456,3 @@ class BackupManager(dbus.service.Object):
 
             time.sleep(wait_seconds)
             event.set()
-
-
-
-
-
-
-
-# # these are the options that are not given in the [default]
-# # section.
-# conf_destination = task[const.CONF_KEY_DESTINATION][0]
-# conf_sources = task[const.CONF_KEY_SOURCE]
-#
-# # now we can check the values
-# if not os.path.exists(conf_destination):
-#     if not conf_create_destination:
-#         logger.error("Destination \"%s\" does not exists, will no "
-#                      "be created. Archive will be skipped.",
-#                      conf_destination)
-#         continue
-# if not os.path.isdir(conf_destination):
-#     logger.critical("Destination \"%s\" not a directory. "
-#                     "Aborting.", conf_destination)
-#     sys.exit(const.EXIT_INVALID_DESTINATION)
-#
-# if conf_include_files is not None:
-#     for include_file in conf_include_files:
-#         if include_file is None:
-#             continue
-#         if not os.path.exists(include_file):
-#             logger.critical("Include file \"%s\" not found. "
-#                             "Aborting.", include_file)
-#             sys.exit(const.EXIT_INCLUDE_FILE_NOT_FOUND)
-#         elif not os.path.isfile(include_file):
-#             logger.critical("Include file \"%s\" is not a file. "
-#                             "Aborting.", include_file)
-#             sys.exit(const.EXIT_INCLUDE_FILE_INVALID)
-#
-# if conf_exclude_files is not None:
-#     for exclude_file in conf_exclude_files:
-#         if exclude_file is None:
-#             continue
-#         if not os.path.exists(exclude_file):
-#             logger.critical("Exclude file \"%s\" not found. "
-#                             "Aborting.", exclude_file)
-#             sys.exit(const.EXIT_EXCULDE_FILE_NOT_FOUND)
-#         elif not os.path.isfile(exclude_file):
-#             logger.critical("Exclude file \"%s\" is not a file. "
-#                             "Aborting.", exclude_file)
-#             sys.exit(const.EXIT_EXCLUDE_FILE_INVALID)
-#
-# if conf_rsync_logfile:
-#     conf_rsync_logfile_options = rsync.LogfileOptions(
-#         conf_rsync_logfile_name, conf_rsync_logfile_format)
-# else:
-#     conf_rsync_logfile_options = None
-#
-# conf_rsyncfilter = rsync.Filter(conf_include_patterns,
-#                                 conf_exclude_patterns,
-#                                 conf_include_files,
-#                                 conf_exclude_files,
-#                                 conf_filter_patterns)
-#
-# rsync_args = []
-# for arg in conf_rsync_args:
-#     rsync_args.extend(arg.split())
-# conf_rsync_args = rsync_args
-#
-# if conf_one_filesystem:
-#     conf_rsync_args.append("-x")
-#
-# ssh_args = []
-# if conf_ssh_args is not None:
-#     ssh_args = ["--rsh", conf_ssh_args]
-# conf_rsync_args.extend(ssh_args)
-#
-# conf_taskname = task[const.CONF_KEY_TASKNAME][0]
-# conf_task_intervals = task[const.CONF_KEY_INTERVAL]
-# conf_task_keeps = task[const.CONF_KEY_KEEP]
-# conf_task_keep_age = task[const.CONF_KEY_KEEP_AGE]
-#
-# for (interval_name, keep_count) in conf_task_keeps.items():
-#     if keep_count <= 0:
-#         logger.critical("Maximum backup count must be greater "
-#                         "than zero, %s found for interval \"%s\".",
-#                         keep_count,
-#                         interval_name)
-#         sys.exit(const.EXIT_INVALID_CONFIG_FILE)
-#
-# task_keep_age = collections.OrderedDict()
-# for (backup_interval, max_age) in conf_task_keep_age.items():
-#     task_keep_age[backup_interval] = \
-#         interval.interval_to_oldest_datetime(max_age)
-#
-# self.archives.append(
-#         archive.Archive(conf_sources,
-#                         conf_destination,
-#                         conf_taskname,
-#                         conf_task_intervals,
-#                         conf_task_keeps,
-#                         task_keep_age,
-#                         conf_rsyncfilter,
-#                         conf_rsync_logfile_options,
-#                         conf_rsync_args,
-#                         self.conf_rsync_cmd))
-#
-#
-#
