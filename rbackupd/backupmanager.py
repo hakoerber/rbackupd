@@ -297,7 +297,7 @@ class BackupManager(dbus.service.Object):
                                 "directory.", destination)
                 sys.exit(const.EXIT_INVALID_DESTINATION)
 
-        for filter_file in zip(include_files, exclude_files):
+        for filter_file in include_files + exclude_files:
             if not os.path.exists(filter_file):
                 logger.critical("File \"%s\" not found. Aborting.", filter_file)
                 sys.exit(const.FILE_NOT_FOUND)
