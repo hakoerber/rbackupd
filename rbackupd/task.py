@@ -80,7 +80,7 @@ class Task(object):
                                                      folder)))
         logger.debug("Task \"%s\": Found the following folders: %s.",
                      self.name,
-                     backups)
+                     [backup.path for backup in backups])
         for backup in backups:
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
