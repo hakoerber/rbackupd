@@ -81,13 +81,13 @@ class Task(object):
         logger.debug("Task \"%s\": Found the following folders: %s.",
                      self.name,
                      backups)
-        backups = [backup for backup in backups if backup.is_finished()]
         for backup in backups:
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
                                "backup, will be skipped.",
                                backup.folder_name)
-                del backup
+        backups = [backup for backup in backups if backup.is_finished()]
+
         for backup in backups:
             backup.read_meta_file()
         return backups
