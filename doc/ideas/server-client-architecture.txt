@@ -1,0 +1,11 @@
+The new architecture of rbackupd could look like this:
+
+We divide rbackupd into two programs:
+
+1) rbackupd (the daemon)
+2) rbackupd-client
+
+The daemon runs as a service with root prvileges. It handles all backup jobs
+and reads and writes configuration files and log files. It communicates with the
+client via D-Bus, which allows the client to scheudule new backups and
+manipulate and remove existing jobs etc.

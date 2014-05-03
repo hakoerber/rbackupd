@@ -23,13 +23,14 @@ arguments of rsync for ease of use.
 
 import logging
 import os
+import shlex
 
-from . import cmd
+from rbackupd import cmd
 
 logger = logging.getLogger(__name__)
 
 
-def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
+def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
           loggingOptions):
     """
     Runs the rsync command with specific parameters.
@@ -57,24 +58,22 @@ def rsync(command, source, destination, link_ref, arguments, rsyncfilter,
 
     args.extend(rsyncfilter.get_args())
 
-    args.extend(arguments)
+    args.extend(shlex.split(arguments))
 
     if link_ref is not None:
         args.append("--link-dest=%s" % link_ref)
 
+
     if loggingOptions is not None:
-        args.append("--log-file=%s" % os.path.join(destination,
-                                                   loggingOptions.log_name))
-        if loggingOptions.log_format is not None:
+        log_path = os.path.join(destination, "..", loggingOptions.log_name)
+        args.append("--log-file=%s" % log_path)
+        if len(loggingOptions.log_format) != 0:
             args.append("--log-file-format=%s" % loggingOptions.log_format)
 
-    args.append(source)
+    args.extend(sources)
     args.append(destination)
 
     logger.verbose("Executing \"%s\".", " ".join(args))
-
-    # create the directory first, otherwise logging will fail
-    os.mkdir(destination)
 
     proc = cmd.Popen(args,
                      stdout=cmd.PIPE,
@@ -136,28 +135,18 @@ class Filter(object):
         """
         args = []
         for rfilter in self.filters:
-            if rfilter == "" or rfilter is None:
-                continue
             args.extend(["--filter", rfilter])
 
         for pattern in self.include_patterns:
-            if pattern == "" or pattern is None:
-                continue
             args.extend(["--include", pattern])
 
         for patternfile in self.include_files:
-            if patternfile == "" or patternfile is None:
-                continue
             args.extend(["--include-from", patternfile])
 
         for pattern in self.exclude_patterns:
-            if pattern == "" or pattern is None:
-                continue
             args.extend(["--exclude", pattern])
 
         for patternfile in self.exclude_files:
-            if patternfile == "" or patternfile is None:
-                continue
             args.extend(["--exclude-from", patternfile])
 
         return args
