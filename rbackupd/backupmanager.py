@@ -73,7 +73,6 @@ class BackupManager(dbus.service.Object):
                 path=self.config_path, configspec=const.DEFAULT_SCHEME_PATH)
 
         except configmanager.ConfigError as err:
-            print(dir(err))
             logger.critical("Invalid config file: error line %s (\"%s\"): %s",
                             err.line_number,
                             err.line,
