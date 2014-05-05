@@ -18,7 +18,7 @@ python -m unittest discover \
 
 retval=$?
 
-pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" --filename="*.py" --count
+pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" --filename="*.py" --count --max-line-length=80
 [[ $? != 0 ]] && retval=10 || echo "pep8: OK"
 
 [[ $retval == 0 ]] && echo "All tests passed." || echo "Tests failed."

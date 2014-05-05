@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 VERSION = "%(prog)s v0.5-dev"
 
 
-
 def main(argv):
     parser = argparse.ArgumentParser()
 
@@ -74,8 +73,8 @@ def main(argv):
     except KeyboardInterrupt:
         logger.debug("Caught KeyboardInterrupt")
         logger.info("Keyboard interrupt.")
-        sys.exit(const.EXIT_KEYBOARD_INTERRUPT)
+        raise
     except SystemExit as err:
         logger.debug("Caught SystemExit")
         logger.info("Exiting with code %s.", err.code)
-        sys.exit(err.code)
+        raise

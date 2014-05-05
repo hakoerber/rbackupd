@@ -53,7 +53,7 @@ you have to tell systemd to reload the new service file by executing
 If rbackupd is not running, it will use the new configuration file when it is
 started next time. If it is running, restart it by running
 
-	# systemctl restart rbackupd.service
+    # systemctl restart rbackupd.service
 
 
 

@@ -19,10 +19,10 @@ from rbackupd import configmanager
 from rbackupd import interval
 
 LOGLEVEL_MAPPING = {
-    "quiet"   : logging.WARNING,
-    "default" : logging.INFO,
-    "verbose" : logging.VERBOSE,
-    "debug"   : logging.DEBUG}
+    "quiet": logging.WARNING,
+    "default": logging.INFO,
+    "verbose": logging.VERBOSE,
+    "debug": logging.DEBUG}
 
 LOGLEVEL_VALUES = list(LOGLEVEL_MAPPING.keys())
 
@@ -34,6 +34,7 @@ LOGLEVEL_VALUES_REVERSE = list(LOGLEVEL_MAPPING_REVERSE.keys())
 logger = logging.getLogger(__name__)
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
 
 class BackupManager(dbus.service.Object):
 
@@ -64,7 +65,6 @@ class BackupManager(dbus.service.Object):
                             err.msg)
             exit(const.EXIT_CONFIG_FILE_INVALID)
         logger.debug("Config file parsed successfully.")
-
 
     @dbus.service.method(const.DBUS_BUS_NAME)
     def write_config(self):
@@ -123,7 +123,6 @@ class BackupManager(dbus.service.Object):
                             ",".join([str(v) for v in LOGLEVEL_VALUES]))
             sys.exit(const.EXIT_INVALID_CONFIG_FILE)
         return level
-
 
     @dbus.service.method(const.DBUS_BUS_NAME)
     def get_loglevel(self):
@@ -232,7 +231,6 @@ class BackupManager(dbus.service.Object):
         task_section.rename(oldname, newname)
         self._load_tasks(reload=True)
 
-
     def _load_tasks(self, reload=False):
         if not reload and self.tasks is not None:
             return
@@ -319,7 +317,6 @@ class BackupManager(dbus.service.Object):
             keep_age = task_section[const.CONF_SECTION_AGE][interval_name]
             keep_age = interval.Interval(keep_age)
 
-
             interval_info = task.IntervalInfo(name=interval_name,
                                               cron_pattern=cron_pattern,
                                               keep_count=keep_count,
@@ -368,10 +365,6 @@ class BackupManager(dbus.service.Object):
             value = []
         return value
 
-
-
-
-
     def start(self):
         self.read_config()
         self._load_tasks()
@@ -381,7 +374,6 @@ class BackupManager(dbus.service.Object):
             logger.debug("Folder containing log file does not exist, will be "
                          "created.")
             os.mkdir(logfile_dir)
-
 
         # now we can change from logging into memory to logging to the logfile
         logging.change_to_logfile_logging(logfile_path=self.get_logfile_path(),
@@ -398,7 +390,6 @@ class BackupManager(dbus.service.Object):
             args=(minutely_event,))
         minutely_process.start()
 
-
         self.run()
 
     def run(self):
@@ -408,7 +399,6 @@ class BackupManager(dbus.service.Object):
         logger.debug("Starting the main loop")
         loop = gi.repository.GObject.MainLoop()
         loop.run()
-
 
     def monitor(self, task, minutely_event):
         """
@@ -422,8 +412,6 @@ class BackupManager(dbus.service.Object):
                 task.create_backups_if_necessary(timestamp=start)
                 task.handle_expired_backups(timestamp=start)
             minutely_event.wait()
-
-
 
     def raise_event_minutely(self, event):
         """

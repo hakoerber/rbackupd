@@ -12,7 +12,6 @@ from rbackupd import levelhandler
 from rbackupd import constants as const
 
 
-
 def change_console_logging_level(loglevel):
     logger.debug("Changing logging level for console to \"%s\".",
                  logging.getLevelName(loglevel))
@@ -27,7 +26,6 @@ def change_file_logging_level(loglevel):
     for handler in logging_file_handlers:
         handler.setLevel(loglevel)
 logging.change_file_logging_level = change_file_logging_level
-
 
 
 def change_to_logfile_logging(logfile_path, loglevel):
