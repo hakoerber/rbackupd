@@ -1,20 +1,5 @@
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2013 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
-#
-# This file is part of rbackupd.
-#
-# rbackupd is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# rbackupd is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
 import logging
@@ -132,7 +117,6 @@ class Task(object):
                 necessary_backups.append(interval_info)
         return necessary_backups
 
-
     def create_backups_if_necessary(self, timestamp):
         """
         Checks whether a backups are necessary and creates them.
@@ -180,9 +164,6 @@ class Task(object):
             symlink_backup.write_meta_file()
             self._register_backup(symlink_backup)
 
-
-
-
     def get_backup_params(self):
         """
         Gets the parameters for a backup.
@@ -205,7 +186,6 @@ class Task(object):
             rsync_filter=self.rsync_filter,
             rsync_logfile_options=self.rsync_logfile_options)
         return backup_params
-
 
     def create_backup(self, new_backup, params):
         destination = new_backup.backup_path
@@ -247,19 +227,21 @@ class Task(object):
                          self.name,
                          interval_info.name)
 
-            backups_of_that_interval = [backup for backup in self.backups if
-                backup.interval_name == interval_info.name]
+            backups_of_that_interval = [backup for
+                                        backup in self.backups if
+                                        backup.interval_name ==
+                                        interval_info.name]
 
             expired_backups.extend(
                 self._get_expired_backups_by_count(
                     backups_of_that_interval,
                     self.scheduling_info.get_info_by_name(interval_info.name).
-                        keep_count))
+                    keep_count))
             expired_backups.extend(
                 self._get_expired_backups_by_age(
                     backups_of_that_interval,
                     self.scheduling_info.get_info_by_name(interval_info.name).
-                        keep_age,
+                    keep_age,
                     timestamp))
 
         return expired_backups
@@ -426,7 +408,6 @@ class IntervalInfo(object):
     @property
     def keep_age(self):
         return self._keep_age.get_oldest_datetime()
-
 
 
 class BackupSchedulingInfo(object):
