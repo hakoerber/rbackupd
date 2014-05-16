@@ -10,7 +10,7 @@ import logging
 import os
 import shlex
 
-from rbackupd import cmd
+from rbackupd import process
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,9 @@ def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
 
     logger.verbose("Executing \"%s\".", " ".join(args))
 
-    proc = cmd.Popen(args,
-                     stdout=cmd.PIPE,
-                     stderr=cmd.PIPE)
+    proc = process.Popen(args,
+                         stdout=process.PIPE,
+                         stderr=process.PIPE)
     (stdoutdata, stderrdata) = proc.communicate()
     return (proc.returncode, stdoutdata, stderrdata)
 
