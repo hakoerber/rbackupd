@@ -237,12 +237,14 @@ class Task(object):
                     backups_of_that_interval,
                     self.scheduling_info.get_info_by_name(interval_info.name).
                     keep_count))
-            expired_backups.extend(
-                self._get_expired_backups_by_age(
+
+            for expired_backup in self._get_expired_backups_by_age(
                     backups_of_that_interval,
                     self.scheduling_info.get_info_by_name(interval_info.name).
                     keep_age,
-                    timestamp))
+                    timestamp):
+                if expired_backup not in expired_backups:
+                    expired_backups.append(expired_backup)
 
         return expired_backups
 
