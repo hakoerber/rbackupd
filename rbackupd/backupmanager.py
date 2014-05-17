@@ -422,10 +422,9 @@ class BackupManager(dbus.service.Object):
         while True:
             start = datetime.datetime.now()
             logger.debug("checking task %s at %s", task.name, start)
-            for task in self.tasks:
-                task.create_backups_if_necessary(timestamp=start)
-                task.handle_expired_backups(timestamp=start)
             minutely_event.wait()
+            task.create_backups_if_necessary(timestamp=start)
+            task.handle_expired_backups(timestamp=start)
 
 
 
