@@ -38,11 +38,15 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 class BackupManager(dbus.service.Object):
 
     def __init__(self, config_path):
-        dbus.service.Object.__init__(
-            self,
-            bus_name=dbus.service.BusName(const.DBUS_BUS_NAME,
-                                          dbus.SystemBus()),
-            object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
+        try:
+            dbus.service.Object.__init__(
+                self,
+                bus_name=dbus.service.BusName(const.DBUS_BUS_NAME,
+                                            dbus.SystemBus()),
+                object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
+        except dbus.exceptions.DBusException:
+            logger.critical("DBus connection failed: access denied.")
+            sys.exit(const.EXIT_DBUS_ACCESS_DENIED)
 
         if not os.path.exists(config_path):
             logger.critical("Config file not found. Aborting.")
