@@ -7,6 +7,7 @@ import os
 import sys
 
 from rbackupd import cron
+from rbackupd import backupstorage
 from rbackupd import constants as const
 from rbackupd import rsync
 from rbackupd import files
@@ -61,8 +62,8 @@ class Task(object):
                 logger.debug("Task \"%s\": Ignoring latest symlink "
                              "\"%s\".", self.name, folder)
                 continue
-            backups.append(BackupFolder(os.path.join(self.destination,
-                                                     folder)))
+            backups.append(backupstorage.BackupFolder(
+                os.path.join(self.destination, folder)))
         logger.debug("Task \"%s\": Found the following folders: %s.",
                      self.name,
                      [backup.path for backup in backups])
@@ -70,11 +71,11 @@ class Task(object):
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
                                "backup, will be skipped.",
-                               backup.folder_name)
+                               backup.folder)
         backups = [backup for backup in backups if backup.is_finished()]
 
         for backup in backups:
-            backup.read_meta_file()
+            backup.load_metadata()
         return backups
 
     def _register_backup(self, backup):
@@ -136,16 +137,15 @@ class Task(object):
             timestamp.strftime(const.DATE_FORMAT),
             interval_info.name)
 
-        new_backup = BackupFolder(os.path.join(
+        new_backup = backupstorage.BackupFolder(os.path.join(
             self.destination, new_folder_name))
 
         params = self.get_backup_params()
-        new_backup.set_meta_data(name=new_folder_name,
-                                 date=timestamp,
-                                 interval=interval_info.name)
+        new_backup.set_metadata(name=new_folder_name,
+                                date=timestamp,
+                                interval_name=interval_info.name)
         new_backup.prepare()
         self.create_backup(new_backup, params)
-        new_backup.write_meta_file()
         self._register_backup(new_backup)
 
         for interval_info in necessary_interval_infos[1:]:
@@ -154,14 +154,14 @@ class Task(object):
                 timestamp.strftime(const.DATE_FORMAT),
                 interval_info.name)
 
-            symlink_backup = BackupFolder(os.path.join(
+            symlink_backup = backupstorage.BackupFolder(os.path.join(
                 self.destination, symlink_name))
-            symlink_backup.set_meta_data(name=symlink_name,
-                                         date=timestamp,
-                                         interval=interval_info.name)
+            symlink_backup.set_metadata(name=symlink_name,
+                                        date=timestamp,
+                                        interval_name=interval_info.name)
             symlink_backup.prepare()
             self._symlink_backup_subfolders(new_backup, symlink_backup)
-            symlink_backup.write_meta_file()
+            symlink_backup.finish()
             self._register_backup(symlink_backup)
 
     def get_backup_params(self):
@@ -176,7 +176,7 @@ class Task(object):
         new_link_ref = self._get_latest_backup()
         if new_link_ref is not None:
             logger.debug("Link-ref of new backup: \"%s\"",
-                         new_link_ref.backup_path)
+                         new_link_ref.data_path)
         else:
             logger.debug("No link ref as no old backup found.")
         backup_params = BackupParameters(
@@ -188,11 +188,11 @@ class Task(object):
         return backup_params
 
     def create_backup(self, new_backup, params):
-        destination = new_backup.backup_path
+        destination = new_backup.data_path
         if params.link_ref is None:
             link_dest = None
         else:
-            link_dest = params.link_ref.backup_path
+            link_dest = params.link_ref.data_path
         logger.info("Creating backup \"%s\".", new_backup.name)
         (returncode, stdoutdata, stderrdata) = rsync.rsync(
             command=params.rsync_cmd,
@@ -208,7 +208,7 @@ class Task(object):
             sys.exit(const.EXIT_RSYNC_FAILED)
         else:
             logger.debug("Rsync finished successfully.")
-        new_backup.write_meta_file()
+        new_backup.finish()
         logger.info("Backup finished successfully.")
         self._relink_latest_symlink(new_backup)
 
@@ -267,7 +267,7 @@ class Task(object):
             # update all remaining symlinks
             logger.info("Expired backup: \"%s\".",
                         expired_backup.name)
-            if os.path.islink(expired_backup.backup_path):
+            if os.path.islink(expired_backup.data_path):
                 logger.info("Removing backup containing symlink \"%s\".",
                             expired_backup.name)
                 files.remove_recursive(expired_backup.path)
@@ -275,9 +275,9 @@ class Task(object):
             else:
                 symlinks = []
                 for backup in self.backups:
-                    if (os.path.samefile(expired_backup.backup_path,
-                                         os.path.realpath(backup.backup_path))
-                            and os.path.islink(backup.backup_path)):
+                    if (os.path.samefile(expired_backup.data_path,
+                                         os.path.realpath(backup.data_path))
+                            and os.path.islink(backup.data_path)):
                         symlinks.append(backup)
 
                 if len(symlinks) == 0:
@@ -290,14 +290,14 @@ class Task(object):
                     # replace the first symlink with the backup
                     logger.info("Removing symlink \"%s\".",
                                 symlinks[0].name)
-                    files.remove_symlink(symlinks[0].backup_path)
+                    files.remove_symlink(symlinks[0].data_path)
 
                     # move the real backup over
                     logger.info("Moving \"%s\" to \"%s\".",
                                 expired_backup.name,
                                 symlinks[0].name)
-                    files.move(expired_backup.backup_path,
-                               symlinks[0].backup_path)
+                    files.move(expired_backup.data_path,
+                               symlinks[0].data_path)
 
                     # remote the "rest" of the expired backup
                     files.remove_recursive(expired_backup.path)
@@ -307,15 +307,15 @@ class Task(object):
                     # now update all symlinks to the directory
                     for remaining_symlink in symlinks[1:]:
                         logger.info("Removing symlink \"%s\".",
-                                    remaining_symlink.backup_path)
-                        files.remove_symlink(remaining_symlink.backup_path)
+                                    remaining_symlink.data_path)
+                        files.remove_symlink(remaining_symlink.data_path)
                         self._symlink_backup_subfolders(new_real_backup,
                                                         remaining_symlink)
             logger.info("Backup removed successfully.")
 
     def _symlink_backup_subfolders(self, target_backup, link_backup):
-        link_name = link_backup.backup_path
-        target = target_backup.backup_path
+        link_name = link_backup.data_path
+        target = target_backup.data_path
         logger.info("Creating symlink \"%s\" pointing to \"%s\"",
                     link_name,
                     target)
@@ -438,117 +438,3 @@ class BackupParameters(object):
         self.rsync_args = rsync_args
         self.rsync_filter = rsync_filter
         self.rsync_logfile_options = rsync_logfile_options
-
-
-class BackupFolder(object):
-
-    def __init__(self, path):
-        self.path = path
-        self.meta_file = BackupMetaInfoFile(
-            os.path.join(self.path, const.NAME_META_FILE))
-
-    def read_meta_file(self):
-        if not self.meta_file.exists():
-            raise Exception("not a finished backup")
-        logger.debug("Reading meta file of backup \"%s\".", self.path)
-        try:
-            self.meta_file.read()
-        except IOError:
-            raise
-
-    def write_meta_file(self):
-        self.meta_file.write()
-
-    def set_meta_data(self, name, date, interval):
-        self.meta_file.set_info(name, date, interval)
-
-    def prepare(self):
-        logger.debug("Preparing backup folder \"%s\".", self.path)
-        os.mkdir(self.path)
-
-    def is_finished(self):
-        content = os.listdir(self.path)
-        return (const.NAME_META_FILE in content and
-                const.NAME_BACKUP_SUBFOLDER in content)
-
-    @property
-    def folder_name(self):
-        return os.path.basename(self.path)
-
-    @property
-    def date(self):
-        return self.meta_file.date
-
-    @property
-    def name(self):
-        return self.meta_file.name
-
-    @property
-    def interval_name(self):
-        return self.meta_file.interval
-
-    @property
-    def backup_path(self):
-        return os.path.join(self.path, const.NAME_BACKUP_SUBFOLDER)
-
-    @property
-    def metafile_path(self):
-        return os.path.join(self.path, const.NAME_META_FILE)
-
-
-class BackupMetaInfoFile(object):
-
-    def __init__(self, path):
-        self.path = path
-        self.name = None
-        self.date = None
-        self.interval = None
-
-    def read(self):
-        logger.debug("Reading meta file \"%s\".", self.path)
-        try:
-            lines = open(self.path).readlines()
-        except IOError:
-            raise
-        logger.debug("Content: %s.", lines)
-
-        self.name = lines[const.META_FILE_INDEX_NAME].strip()
-        logger.debug("Name set to \"%s\".", self.name)
-        self.date = datetime.datetime.strptime(
-            lines[const.META_FILE_INDEX_DATE].strip(),
-            const.META_FILE_DATE_FORMAT)
-        logger.debug("Date set to \"%s\".", self.date.isoformat())
-        self.interval = lines[const.META_FILE_INDEX_INTERVAL].strip()
-        logger.debug("Interval set to \"%s\".", self.interval)
-
-    def set_info(self, name, date, interval):
-        self.name = name
-        self.date = date
-        self.interval = interval
-
-    def write(self):
-        logger.debug("Writing meta file \"%s\".", self.path)
-        content = self._get_string()
-        logger.debug("Content to write:\n\"%s\".", content)
-        with open(self.path, 'w') as fd:
-            fd.write(content)
-
-    def _get_string(self):
-        # yeah the following is not shitty at all
-        content = [None] * const.META_FILE_LINES
-        content[const.META_FILE_INDEX_NAME] = self.name
-        content[const.META_FILE_INDEX_DATE] = self.date.strftime(
-            const.META_FILE_DATE_FORMAT)
-        content[const.META_FILE_INDEX_INTERVAL] = self.interval
-        ret = "\n".join([str(f) for f in content]) + "\n"
-        return ret
-
-    def exists(self):
-        return os.path.exists(self.path)
-
-
-class BackupInterval(object):
-
-    def __init__(self, name, cronjob):
-        self.name = name
-        self.cronjob = cronjob
