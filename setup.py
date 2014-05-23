@@ -24,7 +24,7 @@ setup(
           ('/usr/lib/systemd/system/', ['init/systemd/rbackupd.service']),
           ('/etc/dbus-1/system.d/', ['other/dbus/rbackupd.conf'])
           ],
-      requires = ['configobj'],
+      requires = ['configobj', 'pygobject'],
 
       classifiers = [
           'Development Status :: 2 - Pre-Alpha',
