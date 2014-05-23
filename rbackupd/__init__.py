@@ -13,6 +13,12 @@ from rbackupd import constants as const
 
 
 def change_console_logging_level(loglevel):
+    """
+    Change the loglevel of the console output for all loggers of the package.
+
+    :param loglevel: The new loglevel.
+    :type loglevel: int
+    """
     logger.debug("Changing logging level for console to \"%s\".",
                  logging.getLevelName(loglevel))
     for handler in logging_console_handlers:
@@ -21,6 +27,12 @@ logging.change_console_logging_level = change_console_logging_level
 
 
 def change_file_logging_level(loglevel):
+    """
+    Change the loglevel of the logfile output for all loggers of the package.
+
+    :param loglevel: The new loglevel.
+    :type loglevel: int
+    """
     logger.debug("Changing logging level for log file to \"%s\".",
                  logging.getLevelName(loglevel))
     for handler in logging_file_handlers:
@@ -28,7 +40,18 @@ def change_file_logging_level(loglevel):
 logging.change_file_logging_level = change_file_logging_level
 
 
-def change_to_logfile_logging(logfile_path, loglevel):
+def change_to_logfile_logging(logfile_path, loglevel=None):
+    """
+    Change from cached logging to logging to a real logfile. Flushes all
+    messages in the cache to the file.
+
+    :param logfile_path: The path of the logfile.
+    :type logfile_path: str
+
+    :param loglevel: The loglevel for the logfile. If it is omitted, the
+                     loglevel of the cache is used.
+    :type loglevel: int
+    """
     logger.debug("Switching from logging to memory to logging to file at "
                  "\"%s\" with level \"%s\".",
                  logfile_path,
@@ -36,6 +59,9 @@ def change_to_logfile_logging(logfile_path, loglevel):
     global logging_memory_handler
     if logging_memory_handler is None:
         return
+
+    loglevel = (loglevel if loglevel is not None
+                else logging_memory_handler.level)
 
     logfile_handler = logging.handlers.RotatingFileHandler(
         logfile_path,

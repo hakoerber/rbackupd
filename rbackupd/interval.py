@@ -9,14 +9,47 @@ logger = logging.getLogger(__name__)
 
 
 class Interval(object):
+    """
+    Represents an interval relative to the current date.
+    You can use the following suffixes:
+    ======  ==========
+    suffix  stands for
+    ======  ==========
+    m       minutes
+    h       hours
+    w       weeks
+    d       days
+    M       months
+    ======  ==========
+
+    You can use this module for example to check whether some event happened
+    in the last 3 days like this::
+
+        import interval
+
+        point_in_time = some_datetime
+
+        interval = interval.Interval("3d")
+
+        if interval.get_oldest_datetime >= datetime_to_check:
+            print("point_in_time happened in the last 3 days")
+
+    :param interval_string: Describes the interval.
+    :type interval_string: str
+    """
     def __init__(self, interval_string):
         self.interval_string = interval_string
 
     def get_oldest_datetime(self):
-        return interval_to_oldest_datetime(self.interval_string)
+        """
+        Returns the oldest datetime that still lies inside the interval.
+
+        :rtype: datetime instance
+        """
+        return _interval_to_oldest_datetime(self.interval_string)
 
 
-def interval_to_oldest_datetime(interval):
+def _interval_to_oldest_datetime(interval):
     result = datetime.datetime.now()
     suffix = interval[-1:]
     value = int(interval[:-1])

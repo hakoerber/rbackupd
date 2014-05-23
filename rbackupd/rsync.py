@@ -19,25 +19,32 @@ def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
           loggingOptions):
     """
     Runs the rsync command with specific parameters.
+
     :param command: The exact command to execute. Just use "rsync" to search
-    for the rsync executable in PATH
-    :type command: string
+                    for the rsync executable in PATH
+    :type command: str
+
     :param source: The path to the source of the transfer.
-    :type source: string
+    :type source: str
+
     :param destination: The path to the destination of the transfer.
-    :type destination: string
+    :type destination: str
+
     :param link_ref: The path used for the --link-dest paramter of rsync. All
-    files found there will not be copied from source, but hardlinked into
-    destination.
-    :type link_ref: string
-    :param arguments: An tuple containing additional arguments that will be
-    passed to rsync.
+                     files found there will not be copied from source, but
+                     hardlinked into destination.
+    :type link_ref: str
+
+    :param arguments: A tuple containing additional arguments that will be
+                      passed to rsync.
     :type arguments: tuple
-    :param rsyncfilter: A Filter instance that contains information about
-    filters applied to the files in the rsync transfer.
+
+    :param rsyncfilter: Information about filters applied to the files in the
+                        rsync transfer.
     :type rsyncfilter: Filter instance
-    :param loggingOptions: A LogfileOptions instance containing information
-    about the logging rsync will do.
+
+    :param loggingOptions: Information about the logging rsync will do.
+    :type loggingOptions: LogfileOptions instance
     """
     args = [command]
 
@@ -70,15 +77,15 @@ def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
 class LogfileOptions(object):
     """
     This class holds information about the logfile rsync will create.
+
+    :param log_name: The name of the logfile.
+    :type log_name: str
+
+    :log_format: The format of the log.
+    :type log_format: str
     """
 
     def __init__(self, log_name, log_format):
-        """
-        :param log_name: The name of the logfile.
-        :type log_name: string
-        :log_format: The format of the log.
-        :type log_format: string
-        """
         self.log_name = log_name
         self.log_format = log_format
 
@@ -86,27 +93,30 @@ class LogfileOptions(object):
 class Filter(object):
     """
     This class represents filters applied to the rsync file transfer.
+
+    :param include_patterns: A list of patterns passed to --include
+                             separately.
+    :type include_patterns: list or str
+
+    :param exclude_patterns: A list of patterns passed to --exclude
+                             separately.
+    :type exclude_patterns: list or str
+
+    :param include_files: A list of files passed to --include-file
+                          separately.
+    :type include_files: list or str
+
+    :param exclude_files: A list of files passed to --exclude-file
+                          separately.
+    :type exclude_files: list or str
+
+    :param filters: A list of filter statements passed to --filter
+                    separately.
+    :type filters: list or str
     """
 
     def __init__(self, include_patterns, exclude_patterns, include_files,
                  exclude_files, filters):
-        """
-        :param include_patterns: A list of patterns passed to --include
-        separately.
-        :type include_patterns: list
-        :param exclude_patterns: A list of patterns passed to --exclude
-        separately.
-        :type exclude_patterns: list
-        :param include_files: A list of files passed to --include-file
-        separately.
-        :type include_files: list
-        :param exclude_files: A list of files passed to --exclude-file
-        separately.
-        :type exclude_files: list
-        :param filters: A list of filter statements passed to --filter
-        separately.
-        :type filters: list
-        """
         self.include_patterns = include_patterns
         self.exclude_patterns = exclude_patterns
         self.include_files = include_files
@@ -117,6 +127,8 @@ class Filter(object):
         """
         Constructs a list of arguments containing all desired filters ready
         to be passed to to subprocess.Popen().
+
+        :rtype: list of str
         """
         args = []
         for rfilter in self.filters:

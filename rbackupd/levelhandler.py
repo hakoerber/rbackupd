@@ -5,6 +5,20 @@ import logging
 
 
 class LevelFilter(object):
+    """
+    This is a custom filter for the logging module that filters a range of
+    loglevels. This might be useful if messages below a certain level should
+    go to a different handler than "higher" messages, for example if you want
+    to destinguish between stdout and stderr.
+
+    :param minlvl: The lower loglevel boundary. If not set, there is no lower
+                   boundary.
+    :type minlvl: int
+
+    :param maxlvl: The upper loglevel boundary. If not set, there is no upper
+                   boundary.
+    :type maxlvl: int
+    """
     def __init__(self, minlvl=logging.NOTSET, maxlvl=logging.NOTSET):
         self._minlvl = minlvl
         self._maxlvl = maxlvl

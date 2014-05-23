@@ -2,7 +2,7 @@
 # Copyright (c) 2013 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
 
 """
-This module wraps the subprocess module and adds logging funcionality.
+This module wraps the subprocess module and adds logging functionality.
 """
 
 import logging
