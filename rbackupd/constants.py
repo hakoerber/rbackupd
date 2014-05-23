@@ -94,3 +94,8 @@ DEFAULT_SCHEME_PATH = "/usr/share/rbackupd/scheme.ini"
 
 DBUS_BUS_NAME = "org.rbackupd.daemon"
 DBUS_OBJECT_PATH_BACKUP_MANAGER = "/org/rbackupd/daemon"
+
+LOGGING_CONSOLE_FORMAT = "[{asctime}] [{levelname}] {message}"
+LOGGING_CONSOLE_DATE_FORMAT = "%H:%M:%S"
+LOGGING_FILE_FORMAT = "[{asctime}] [{levelname}] {filename}: {message}"
+LOGGING_FILE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
