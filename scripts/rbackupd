@@ -6,4 +6,5 @@ import sys
 
 import rbackupd.daemon
 
-rbackupd.daemon.main(sys.argv[1:])
+if __name__ == "__main__":
+    rbackupd.daemon.main(sys.argv[1:])
