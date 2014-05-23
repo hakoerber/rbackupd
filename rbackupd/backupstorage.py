@@ -83,6 +83,7 @@ import logging
 import functools
 
 from rbackupd import constants as const
+from rbackupd import files
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,15 @@ class BackupStorage(object):
         raise NotImplementedError()
 
     def is_finished(self):
+        raise NotImplementedError()
+
+    def link_data_from(self, storage):
+        raise NotImplementedError()
+
+    def data_is_link(self):
+        raise NotImplementedError()
+
+    def data_is_link_to(self, storage):
         raise NotImplementedError()
 
     @property
@@ -173,7 +183,7 @@ class BackupFolder(BackupStorage):
 
     def __init__(self, path):
         BackupStorage.__init__(self)
-        self.path = path
+        self._path = path
         self.meta_file = BackupMetadataFile(
             os.path.join(self.path, const.NAME_META_FILE))
 
@@ -290,6 +300,105 @@ class BackupFolder(BackupStorage):
         return (const.NAME_META_FILE in content and
                 const.NAME_BACKUP_SUBFOLDER in content)
 
+    @_only_unfinished
+    def link_data_from(self, storage):
+        """
+        Link the data from the given backup storage into this folder. The
+        backup to link to has to be finished.
+
+        :param storage: The storage to link to.
+        :type storage: BackupStorage instance
+
+        :raise BackupStorageIllegalOperationError:
+            if you try this operation on an unfinised backup
+        """
+        if not storage.is_finished():
+            raise ValueError("the backup to link to has to be finished")
+        link_target = storage.data_path
+        link_name = self.data_path
+        logger.info("Creating symlink \"%s\" pointing to \"%s\"",
+                    link_name,
+                    link_target)
+        files.create_symlink(link_target, link_name)
+
+    def data_is_link(self):
+        """
+        Determine whether the data the folder contains is a link to another
+        backup storage.
+
+        :rtype: bool
+
+        :raise ValueError: if the backup is not finished
+        """
+        if not self.is_finished():
+            raise ValueError("the backup has to be finished")
+        return os.path.islink(self.data_path)
+
+    def data_is_link_to(self, storage):
+        """
+        Determine whether the data of the folder is linked to the data of
+        another storage.
+
+        :param storage: The storage that might be the target of the link.
+        :type storage: BackupStorage instance
+
+        :rtype: bool
+
+        :raise ValueError: if the backup is not finished
+        """
+        try:
+            is_link = self.data_is_link()
+        except ValueError:
+            raise
+        if not is_link:
+            return False
+        print(self.data_is_link())
+        return (self.data_is_link() and
+                os.path.samefile(self.data_path, storage.data_path))
+
+    def remove(self):
+        """
+        Removes the backup folder.
+        """
+        logger.info("Removing directory \"%s\".", self.path)
+        files.remove_recursive(self.path)
+
+    def remove_data_link(self):
+        """
+        Remove the data from the backup, but leaves the metadata unchanged. If
+        the data is not a link to another storage, this will raise an error.
+
+        :raise ValueError: if the data is not a link to another storage
+        """
+        logger.info("Removing data link at \"%s\"", self.data_path)
+        if not self.data_is_link():
+            raise ValueError("the data is not a link")
+        files.remove_symlink(self.data_path)
+
+    def move_data_to(self, storage):
+        """
+        Move the data from this backup to the specified storage. The folder has
+        to be finished and the storage to move the data to must not.
+        Additionally, the folder must not be a link.
+
+        :param storage: The backup to move the data to.
+        :type storage: BackupStorage instance
+
+        :raise ValueError: if the folder is not finished
+        :raise ValueError: if the data is a link
+        :raise ValueError: if the folder to move to is finished
+        """
+        if not self.is_finished():
+            raise ValueError("the backup has to be finished")
+        if self.data_is_link():
+            raise ValueError("the backup data is a link")
+        if storage.is_finished():
+            raise ValueError("the target backup must not be finshed")
+        logger.debug("Moving data from folder \"%s\" to folder \"%s\"",
+                     self.path,
+                     storage.path)
+        files.move(self.data_path, storage.data_path)
+
     @property
     def date(self):
         """
@@ -336,6 +445,13 @@ class BackupFolder(BackupStorage):
         The path to the backup data. This is where the actual backup is stored.
         """
         return os.path.join(self.path, const.NAME_BACKUP_SUBFOLDER)
+
+    @property
+    def path(self):
+        """
+        The path to the folder.
+        """
+        return self._path
 
 
 class BackupMetadataFile(object):
