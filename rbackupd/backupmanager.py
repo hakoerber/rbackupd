@@ -85,6 +85,13 @@ class BackupManager(dbus.service.Object):
             self.configmanager = configmanager.ConfigManager(
                 path=self.config_path, configspec=const.DEFAULT_SCHEME_PATH)
 
+        except IOError as error:
+            logger.critical("Error accessing a file: %s", str(error))
+            exit(const.EXIT_FILE_NOT_FOUND)
+        except configmanager.ValidationError as error:
+            logger.critical("The validation of the configuration file failed. "
+                            "Message:\n%s", str(error))
+            exit(const.EXIT_CONFIG_FILE_INVALID)
         except configmanager.ConfigError as err:
             logger.critical("Invalid config file: error line %s (\"%s\"): %s",
                             err.line_number,
@@ -289,7 +296,7 @@ class BackupManager(dbus.service.Object):
         def _get(key):
             task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
             default_section = self.configmanager[const.CONF_SECTION_TASKS]
-            if key in task_section:
+            if task_section[key] is not None:
                 value = task_section[key]
             else:
                 value = default_section[key]
