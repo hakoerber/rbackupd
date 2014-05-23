@@ -11,9 +11,7 @@ from rbackupd import levelhandler
 
 logger = logging.getLogger(__name__)
 
-
 VERSION = "%(prog)s v0.5-dev"
-
 
 
 def main(argv):

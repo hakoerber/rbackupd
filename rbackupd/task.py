@@ -1,12 +1,15 @@
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2013 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
 
+"""
+The task module.
+"""
+
 import datetime
 import logging
 import os
 import sys
 
-from rbackupd import cron
 from rbackupd import backupstorage
 from rbackupd import constants as const
 from rbackupd import rsync
@@ -49,42 +52,74 @@ class Task(object):
 
         self._backups = self._read_backups()
 
+    def _is_latest_symlink(self, folder):
+        return folder == const.SYMLINK_LATEST_NAME
+
     @property
     def backups(self):
         assert(self._backups is not None)
         return self._backups
 
     def _read_backups(self):
+        """
+        Parse the backups that already exist at the destination into objects and
+        return them in a list.
+
+        :rtype: list of Backup instances
+        """
         logger.debug("Task \"%s\": Reading backups.", self.name)
         backups = []
         for folder in os.listdir(self.destination):
-            if folder == const.SYMLINK_LATEST_NAME:
+            if self._is_latest_symlink(folder):
                 logger.debug("Task \"%s\": Ignoring latest symlink "
                              "\"%s\".", self.name, folder)
                 continue
-            backups.append(backupstorage.BackupFolder(
-                os.path.join(self.destination, folder)))
-        logger.debug("Task \"%s\": Found the following folders: %s.",
-                     self.name,
-                     [backup.path for backup in backups])
-        for backup in backups:
+
+            backup = backupstorage.BackupFolder(
+                os.path.join(self.destination, folder))
+
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
                                "backup, will be skipped.",
                                backup.folder)
-        backups = [backup for backup in backups if backup.is_finished()]
+                continue
 
-        for backup in backups:
-            backup.load_metadata()
+            try:
+                backup.load_metadata()
+            except backupstorage.InvalidBackupError as error:
+                logger.critical(
+                    "Backup at \"%s\" is invalid, the metadata could not be "
+                    "read: \"%s\"",
+                    error.path,
+                    error.message)
+                sys.exit(const.EXIT_ERROR_GENERAL)
+
+            backups.append(backup)
+        logger.debug("Task \"%s\": Found the following folders: %s.",
+                     self.name,
+                     ",".join([backup.path for backup in backups]))
+
         return backups
 
     def _register_backup(self, backup):
+        """
+        Add a new backup to the already existing backups.
+
+        :param backup: The backup to register.
+        :type backup: Backup instance
+        """
         assert(self._backups is not None)
         logger.debug("Task \"%s\": Registering backup \"%s\".",
                      self.name, backup.name)
         self._backups.append(backup)
 
     def _unregister_backup(self, backup):
+        """
+        Removes a backup from the backups known to this task.
+
+        :param backup: The backup to unregister.
+        :type backup: Backup instance
+        """
         assert(self._backups is not None)
         if backup not in self._backups:
             raise ValueError("backup not found")
@@ -94,8 +129,9 @@ class Task(object):
 
     def _get_necessary_interval_infos(self):
         """
-        Returns all backups deemed necessary.
-        :rtype: list of IntervalInfos.
+        Return all intervals that require a new backup.
+
+        :rtype: list of IntervalInfos instances
         """
         necessary_backups = []
         for interval_info in self.scheduling_info.interval_infos:
@@ -120,9 +156,10 @@ class Task(object):
 
     def create_backups_if_necessary(self, timestamp):
         """
-        Checks whether a backups are necessary and creates them.
+        Check whether a backups are necessary and create them.
+
         :param timestamp: The timestamp all potentially created backups will be
-        assigned.
+                          assigned.
         :type timestamp: datetime.datetime instance
         """
         necessary_interval_infos = self._get_necessary_interval_infos()
@@ -132,10 +169,10 @@ class Task(object):
 
         interval_info = necessary_interval_infos[0]
 
-        new_folder_name = const.PATTERN_BACKUP_FOLDER % (
-            self.name,
-            timestamp.strftime(const.DATE_FORMAT),
-            interval_info.name)
+        new_folder_name = self._get_folder_name(
+            name=self.name,
+            date=timestamp.strftime(const.DATE_FORMAT),
+            interval_name=interval_info.name)
 
         new_backup = backupstorage.BackupFolder(os.path.join(
             self.destination, new_folder_name))
@@ -146,29 +183,42 @@ class Task(object):
                                 interval_name=interval_info.name)
         new_backup.prepare()
         self.create_backup(new_backup, params)
+        new_backup.finish()
         self._register_backup(new_backup)
 
+        # all other necessary backups will just be symlinked to the one just
+        # created
         for interval_info in necessary_interval_infos[1:]:
-            symlink_name = const.PATTERN_BACKUP_FOLDER % (
-                self.name,
-                timestamp.strftime(const.DATE_FORMAT),
-                interval_info.name)
+            self._create_symlink_backup(timestamp=timestamp,
+                                        target=new_backup,
+                                        interval_info=interval_info)
 
+    def _create_symlink_backup(self, timestamp, target, interval_info):
+            symlink_name = self._get_folder_name(
+                name=self.name,
+                date=timestamp.strftime(const.DATE_FORMAT),
+                interval_name=interval_info.name)
             symlink_backup = backupstorage.BackupFolder(os.path.join(
                 self.destination, symlink_name))
             symlink_backup.set_metadata(name=symlink_name,
                                         date=timestamp,
                                         interval_name=interval_info.name)
             symlink_backup.prepare()
-            self._symlink_backup_subfolders(new_backup, symlink_backup)
+            symlink_backup.link_data_from(target)
             symlink_backup.finish()
             self._register_backup(symlink_backup)
+
+    def _get_folder_name(self, name, date, interval_name):
+        return const.PATTERN_BACKUP_FOLDER.format(
+            name=name,
+            date=date,
+            interval_name=interval_name)
 
     def get_backup_params(self):
         """
         Gets the parameters for a backup.
-        :returns: A BackupParameters instance with information about the new
-        backup.
+
+        :returns: Information about the new backup.
         :rtype: BackupParameters instance
         """
         logger.debug("Task \"%s\": Getting parameters of new backup.",
@@ -208,7 +258,6 @@ class Task(object):
             sys.exit(const.EXIT_RSYNC_FAILED)
         else:
             logger.debug("Rsync finished successfully.")
-        new_backup.finish()
         logger.info("Backup finished successfully.")
         self._relink_latest_symlink(new_backup)
 
@@ -241,12 +290,15 @@ class Task(object):
             for expired_backup in self._get_expired_backups_by_age(
                     backups_of_that_interval,
                     self.scheduling_info.get_info_by_name(interval_info.name).
-                    keep_age,
-                    timestamp):
+                    keep_age):
                 if expired_backup not in expired_backups:
                     expired_backups.append(expired_backup)
 
         return expired_backups
+
+    def _get_all_links_to(self, target):
+        return [backup for backup in self.backups if
+                backup.data_is_link_to(target)]
 
     def handle_expired_backups(self, timestamp):
         """
@@ -260,68 +312,48 @@ class Task(object):
             return
 
         for expired_backup in expired_backups:
-            # as a backup might be a symlink to another backup, we have to
-            # consider: when it is a symlink, just remove the symlink. if not,
-            # other backupSSS!! might be a symlink to it, so we have to check
-            # all other backups. we overwrite one symlink with the backup and
-            # update all remaining symlinks
             logger.info("Expired backup: \"%s\".",
                         expired_backup.name)
-            if os.path.islink(expired_backup.data_path):
-                logger.info("Removing backup containing symlink \"%s\".",
-                            expired_backup.name)
-                files.remove_recursive(expired_backup.path)
-                self._unregister_backup(expired_backup)
-            else:
-                symlinks = []
-                for backup in self.backups:
-                    if (os.path.samefile(expired_backup.data_path,
-                                         os.path.realpath(backup.data_path))
-                            and os.path.islink(backup.data_path)):
-                        symlinks.append(backup)
 
-                if len(symlinks) == 0:
-                    # just remove the backups, no symlinks present
-                    logger.info("Removing directory \"%s\".",
-                                expired_backup.name)
-                    files.remove_recursive(expired_backup.path)
-                    self._unregister_backup(expired_backup)
-                else:
-                    # replace the first symlink with the backup
-                    logger.info("Removing symlink \"%s\".",
-                                symlinks[0].name)
-                    files.remove_symlink(symlinks[0].data_path)
+            if expired_backup.data_is_link():
+                continue
 
-                    # move the real backup over
-                    logger.info("Moving \"%s\" to \"%s\".",
-                                expired_backup.name,
-                                symlinks[0].name)
-                    files.move(expired_backup.data_path,
-                               symlinks[0].data_path)
+            symlinks = self._get_all_links_to(expired_backup)
 
-                    # remote the "rest" of the expired backup
-                    files.remove_recursive(expired_backup.path)
-                    self._unregister_backup(expired_backup)
+            print([b.path for b in symlinks])
 
-                    new_real_backup = symlinks[0]
-                    # now update all symlinks to the directory
-                    for remaining_symlink in symlinks[1:]:
-                        logger.info("Removing symlink \"%s\".",
-                                    remaining_symlink.data_path)
-                        files.remove_symlink(remaining_symlink.data_path)
-                        self._symlink_backup_subfolders(new_real_backup,
-                                                        remaining_symlink)
+            if len(symlinks) != 0:
+                new_real_backup = symlinks[0]
+                logger.debug("Linked folder at \"%s\" points to the expired "
+                             "backup \"%s\", data will be moved over.",
+                             new_real_backup.path,
+                             expired_backup.path)
+
+                # move the data from the expired backup to the new "real"
+                # backup
+                new_real_backup.remove_data_link()
+                expired_backup.move_data_to(new_real_backup)
+
+                # update all remaining symlinks to point to the new backup
+                # instead of the expired one
+                for remaining_symlink in symlinks[1:]:
+                    logger.debug("Fixing folder at \"%s\" so it points to "
+                                 "\"%s\"..",
+                                 remaining_symlink.path,
+                                 new_real_backup.path)
+
+                    remaining_symlink.remove_data_link()
+                    remaining_symlink.link_data_from(new_real_backup)
+
+            expired_backup.remove()
+            self._unregister_backup(expired_backup)
+
             logger.info("Backup removed successfully.")
 
-    def _symlink_backup_subfolders(self, target_backup, link_backup):
-        link_name = link_backup.data_path
-        target = target_backup.data_path
-        logger.info("Creating symlink \"%s\" pointing to \"%s\"",
-                    link_name,
-                    target)
-        files.create_symlink(target, link_name)
-
     def _relink_latest_symlink(self, backup):
+        """
+        Updates the "latest" symlink to make it point to a new backup.
+        """
         destination = backup.path
         logger.debug("Fixing latest symlink, new target is \"%s\".",
                      destination)
@@ -349,7 +381,7 @@ class Task(object):
             expired_backups.append(backups[i])
         return expired_backups
 
-    def _get_expired_backups_by_age(self, backups, max_age, timestamp):
+    def _get_expired_backups_by_age(self, backups, max_age):
         """
         Returns all backups that are expired relative to the maximum age of
         kept backups. It pracically just returns all backups older than
@@ -400,10 +432,27 @@ class Task(object):
 
 
 class IntervalInfo(object):
+    """
+    Contains information about a backup interval. This means:
+        - information about when to create a new backup
+        - information about when to delete an existing backup
+
+    :param name: The name of the interval.
+    :type name: str
+
+    :param cron_pattern: A cronjob to specify the interval
+    :type cron_pattern: Cronjob instance
+
+    :param keep_count: The amount of backups to keep.
+    :type keep_count: int
+
+    :param keep_age: The maximum age allowed for a backup.
+    :type keep_age: Interval instance
+    """
 
     def __init__(self, name, cron_pattern, keep_count, keep_age):
         self.name = name
-        self.cronjob = cron.Cronjob(cron_pattern)
+        self.cronjob = cron_pattern
         self.keep_count = keep_count
         self._keep_age = keep_age
 
@@ -412,17 +461,31 @@ class IntervalInfo(object):
         return self._keep_age.get_oldest_datetime()
 
 
-class BackupSchedulingInfo(object):
+class TaskSchedulingInfo(object):
+    """
+    Contains information about when a tasks requires a new backup or a backup
+    expires. This is generally just a list of IntervalInfo objects.
+    """
 
     def __init__(self, interval_infos=None):
         self.interval_infos = [] if interval_infos is None else interval_infos
 
     def append(self, interval_info):
+        """
+        Append a new interval info to the schedule.
+
+        :type interval_info: IntervalInfo instance
+        """
         if interval_info in self.interval_infos:
             raise ValueError("interval info already in scheduling info")
         self.interval_infos.append(interval_info)
 
     def get_info_by_name(self, name):
+        """
+        Return the interval info with the given name.
+
+        :type name: str
+        """
         for interval_info in self.interval_infos:
             if interval_info.name == name:
                 return interval_info
