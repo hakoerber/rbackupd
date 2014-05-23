@@ -435,14 +435,7 @@ class BackupManager(dbus.service.Object):
         logger.debug("starting minutely event raiser process")
         while True:
             event.clear()
-            now = datetime.datetime.now()
-            if now.minute == 59:
-                wait_seconds = 60 - now.second
-            else:
-                nextmin = now.replace(minute=now.minute + 1,
-                                      second=0,
-                                      microsecond=0)
-                wait_seconds = (nextmin - now).seconds + 1
+            wait_seconds = 60 - datetime.datetime.now().second
             logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
 
             time.sleep(wait_seconds)
