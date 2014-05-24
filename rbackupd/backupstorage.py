@@ -352,7 +352,6 @@ class BackupFolder(BackupStorage):
             raise
         if not is_link:
             return False
-        print(self.data_is_link())
         return (self.data_is_link() and
                 os.path.samefile(self.data_path, storage.data_path))
 

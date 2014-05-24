@@ -315,35 +315,33 @@ class Task(object):
             logger.info("Expired backup: \"%s\".",
                         expired_backup.name)
 
-            if expired_backup.data_is_link():
-                continue
+            if not expired_backup.data_is_link():
 
-            symlinks = self._get_all_links_to(expired_backup)
+                symlinks = self._get_all_links_to(expired_backup)
 
-            print([b.path for b in symlinks])
+                if len(symlinks) != 0:
+                    new_real_backup = symlinks[0]
+                    logger.debug("Linked folder at \"%s\" points to the "
+                                 "expired backup \"%s\", data will be moved "
+                                 "over.",
+                                 new_real_backup.path,
+                                 expired_backup.path)
 
-            if len(symlinks) != 0:
-                new_real_backup = symlinks[0]
-                logger.debug("Linked folder at \"%s\" points to the expired "
-                             "backup \"%s\", data will be moved over.",
-                             new_real_backup.path,
-                             expired_backup.path)
+                    # move the data from the expired backup to the new "real"
+                    # backup
+                    new_real_backup.remove_data_link()
+                    expired_backup.move_data_to(new_real_backup)
 
-                # move the data from the expired backup to the new "real"
-                # backup
-                new_real_backup.remove_data_link()
-                expired_backup.move_data_to(new_real_backup)
+                    # update all remaining symlinks to point to the new backup
+                    # instead of the expired one
+                    for remaining_symlink in symlinks[1:]:
+                        logger.debug("Fixing folder at \"%s\" so it points to "
+                                     "\"%s\"..",
+                                     remaining_symlink.path,
+                                     new_real_backup.path)
 
-                # update all remaining symlinks to point to the new backup
-                # instead of the expired one
-                for remaining_symlink in symlinks[1:]:
-                    logger.debug("Fixing folder at \"%s\" so it points to "
-                                 "\"%s\"..",
-                                 remaining_symlink.path,
-                                 new_real_backup.path)
-
-                    remaining_symlink.remove_data_link()
-                    remaining_symlink.link_data_from(new_real_backup)
+                        remaining_symlink.remove_data_link()
+                        remaining_symlink.link_data_from(new_real_backup)
 
             expired_backup.remove()
             self._unregister_backup(expired_backup)
