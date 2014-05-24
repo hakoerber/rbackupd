@@ -83,7 +83,7 @@ import logging
 import functools
 
 from rbackupd import constants as const
-from rbackupd import files
+from rbackupd.cmd import files
 
 logger = logging.getLogger(__name__)
 

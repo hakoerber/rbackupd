@@ -7,9 +7,9 @@ Contents:
 ---------
 
 .. toctree::
-   :maxdepth: 3
+    :maxdepth: 3
 
-   modules
+    packages
 
 
 Indices and tables

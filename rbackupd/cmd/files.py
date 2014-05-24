@@ -8,7 +8,7 @@ This module wraps frequently needed operations on files and directories.
 import logging
 import os
 
-from rbackupd import process
+from rbackupd.cmd import process
 
 logger = logging.getLogger(__name__)
 

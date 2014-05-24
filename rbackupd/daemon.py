@@ -7,7 +7,6 @@ import logging
 
 from rbackupd import backupmanager
 from rbackupd import constants as const
-from rbackupd import levelhandler
 
 logger = logging.getLogger(__name__)
 

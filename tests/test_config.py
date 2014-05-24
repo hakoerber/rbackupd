@@ -1,6 +1,6 @@
 import unittest
 
-import configmanager
+import rbackupd.config
 
 
 class Tests(unittest.TestCase):

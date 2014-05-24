@@ -8,8 +8,8 @@ import sys
 import logging
 import logging.handlers
 
-from rbackupd import levelhandler
-from rbackupd import constants as const
+import rbackupd.log.levelhandler
+import rbackupd.constants as const
 
 
 def change_console_logging_level(loglevel):
@@ -109,10 +109,10 @@ logger.setLevel(logging.DEBUG)
 stdout_handler = logging.StreamHandler(sys.stdout)
 stderr_handler = logging.StreamHandler(sys.stderr)
 
-stdout_handler.addFilter(levelhandler.LevelFilter(
+stdout_handler.addFilter(rbackupd.log.levelhandler.LevelFilter(
     minlvl=logging.NOTSET,
     maxlvl=logging.WARNING - 1))
-stderr_handler.addFilter(levelhandler.LevelFilter(
+stderr_handler.addFilter(rbackupd.log.levelhandler.LevelFilter(
     minlvl=logging.WARNING,
     maxlvl=logging.CRITICAL))
 

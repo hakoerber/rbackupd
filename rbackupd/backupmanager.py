@@ -15,12 +15,12 @@ import dbus.mainloop.glib
 import gi.repository.GObject
 import multiprocessing
 
-from rbackupd import configmanager
 from rbackupd import constants as const
-from rbackupd import cron
-from rbackupd import interval
-from rbackupd import rsync
 from rbackupd import task
+from rbackupd.cmd import rsync
+from rbackupd.config import configmanager
+from rbackupd.schedule import cron
+from rbackupd.schedule import interval
 
 LOGLEVEL_MAPPING = {
     "quiet"   : logging.WARNING,

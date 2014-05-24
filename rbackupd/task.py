@@ -12,8 +12,8 @@ import sys
 
 from rbackupd import backupstorage
 from rbackupd import constants as const
-from rbackupd import rsync
-from rbackupd import files
+from rbackupd.cmd import files
+from rbackupd.cmd import rsync
 
 logger = logging.getLogger(__name__)
 
