@@ -11,6 +11,7 @@ import logging.handlers
 import rbackupd.log.levelhandler
 import rbackupd.constants as const
 
+__version__ = '0.5-dev'
 
 def change_console_logging_level(loglevel):
     """

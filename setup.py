@@ -16,7 +16,11 @@ setup(
       description = 'A backup program creating snapshots through rsync.',
       long_description = open('README.rst').read(),
 
-      packages = ['rbackupd'],
+      packages = ['rbackupd',
+                  'rbackupd.cmd',
+                  'rbackupd.config',
+                  'rbackupd.log',
+                  'rbackupd.schedule'],
       scripts = ['scripts/rbackupd'],
       data_files = [
           ('/etc/rbackupd', ['conf/rbackupd.conf']),
