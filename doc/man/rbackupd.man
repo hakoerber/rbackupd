@@ -1,0 +1,55 @@
+.TH rbackupd 8 2014-05-04
+.SH NAME
+rbackupd - Backup Daemon creating snapshot-like backups
+.SH SYNOPSIS
+.B rbackupd [OPTIONS...]
+
+.SH DESCRIPTION
+.B rbackupd
+acts as a backup daemon that creates snapshot of arbitary directories using
+.B rsync(1).
+It is mainly controlled by a configuration file (see
+.B rbackupd.conf(5)
+for further details)
+
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config=\fIFILE\fR
+Set the configuration file to read. Defaults to /etc/rbackupd/rbackupd.conf.
+.TP
+.BR \-q ", " \-\-quiet
+Only print warnings and errors.
+.TP
+.BR \-v ", " \-\-verbose
+Be more verbose.
+.TP
+.BR \-\-debug
+Print debug messages.
+.TP
+.BR \-h ", " \-\-help
+Print a short help and exit.
+.TP
+.BR \-\-version
+Print the version and exit.
+
+.SH EXIT STATUS
+TODO
+
+.SH ENVIRONMENT
+rbackupd does not use environment variables.
+
+.SH FILES
+.I
+.TP
+/etc/rbackupd/rbackupd.conf
+The default configuration file. See rbackupd.conf(5) for details.
+
+.SH NOTES
+.B rbackupd
+will not fork.
+
+.SH BUGS
+If two instances of rbackupd are running simultaneously, you will get nasty results.
+
+.SH SEE ALSO
+.B rbackupd.conf(5)

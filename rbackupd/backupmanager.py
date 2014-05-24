@@ -1,6 +1,10 @@
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2013 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
 
+"""
+The backupmanager module.
+"""
+
 import datetime
 import logging
 import os
@@ -11,12 +15,12 @@ import dbus.mainloop.glib
 import gi.repository.GObject
 import multiprocessing
 
-
-from rbackupd import task
-from rbackupd import rsync
-from rbackupd import constants as const
 from rbackupd import configmanager
+from rbackupd import constants as const
+from rbackupd import cron
 from rbackupd import interval
+from rbackupd import rsync
+from rbackupd import task
 
 LOGLEVEL_MAPPING = {
     "quiet"   : logging.WARNING,
@@ -30,19 +34,31 @@ LOGLEVEL_MAPPING_REVERSE = {v: k for k, v in LOGLEVEL_MAPPING.items()}
 
 LOGLEVEL_VALUES_REVERSE = list(LOGLEVEL_MAPPING_REVERSE.keys())
 
-
 logger = logging.getLogger(__name__)
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+
 class BackupManager(dbus.service.Object):
+    """
+    This class is responsible for reading the rbackupd configuration file,
+    starting all tasks specified in it and provide methods to modify these
+    tasks while keeping them in sync with the configuraiton file.
+
+    All important methods for controlling the backup manager are exported via
+    D-Bus for client software to use.
+    """
 
     def __init__(self, config_path):
-        dbus.service.Object.__init__(
-            self,
-            bus_name=dbus.service.BusName(const.DBUS_BUS_NAME,
-                                          dbus.SystemBus()),
-            object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
+        try:
+            dbus.service.Object.__init__(
+                self,
+                bus_name=dbus.service.BusName(const.DBUS_BUS_NAME,
+                                              dbus.SystemBus()),
+                object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
+        except dbus.exceptions.DBusException:
+            logger.critical("DBus connection failed: access denied.")
+            sys.exit(const.EXIT_DBUS_ACCESS_DENIED)
 
         if not os.path.exists(config_path):
             logger.critical("Config file not found. Aborting.")
@@ -50,13 +66,32 @@ class BackupManager(dbus.service.Object):
 
         self.config_path = config_path
         self.tasks = None
+        self.configmanager = None
 
-    def read_config(self):
+    def read_config(self, reload=False):
+        """
+        Reads the configuration file specified in the constructor. By default
+        it will not re-read the configuration file if it was already read.
+
+        :param reload: If True, forces a re-read of the configuration file
+                       even when it was already read. Defaults to False.
+        :type reload: bool
+        """
+        if (self.configmanager is not None and
+                not reload):
+            return
         logger.debug("Starting configuration file parsing.")
         try:
             self.configmanager = configmanager.ConfigManager(
                 path=self.config_path, configspec=const.DEFAULT_SCHEME_PATH)
 
+        except IOError as error:
+            logger.critical("Error accessing a file: %s", str(error))
+            exit(const.EXIT_FILE_NOT_FOUND)
+        except configmanager.ValidationError as error:
+            logger.critical("The validation of the configuration file failed. "
+                            "Message:\n%s", str(error))
+            exit(const.EXIT_CONFIG_FILE_INVALID)
         except configmanager.ConfigError as err:
             logger.critical("Invalid config file: error line %s (\"%s\"): %s",
                             err.line_number,
@@ -64,7 +99,6 @@ class BackupManager(dbus.service.Object):
                             err.msg)
             exit(const.EXIT_CONFIG_FILE_INVALID)
         logger.debug("Config file parsed successfully.")
-
 
     @dbus.service.method(const.DBUS_BUS_NAME)
     def write_config(self):
@@ -92,7 +126,6 @@ class BackupManager(dbus.service.Object):
         """
         Return the path to the logfile.
         """
-        logger.debug("get_logfile_path")
         return self.configmanager.get(
             const.CONF_SECTION_LOGGING).get(
             const.CONF_KEY_LOGFILE_PATH)
@@ -124,7 +157,6 @@ class BackupManager(dbus.service.Object):
             sys.exit(const.EXIT_INVALID_CONFIG_FILE)
         return level
 
-
     @dbus.service.method(const.DBUS_BUS_NAME)
     def get_loglevel(self):
         """
@@ -142,7 +174,7 @@ class BackupManager(dbus.service.Object):
         if loglevel not in LOGLEVEL_VALUES:
             logger.critical("Cannot set loglevel to invalid value \"%s\"",
                             loglevel)
-            sys.exit(con1st.EXIT_ERROR_GENERAL)
+            sys.exit(const.EXIT_ERROR_GENERAL)
 
         logging.change_file_logging_level(loglevel)
 
@@ -232,8 +264,16 @@ class BackupManager(dbus.service.Object):
         task_section.rename(oldname, newname)
         self._load_tasks(reload=True)
 
-
     def _load_tasks(self, reload=False):
+        """
+        Parses the tasks section of the configuration file and creates
+        corresponding objects. By default, it will not re-read the tasks
+        if they were already read before.
+
+        :param reload: If set to True, the tasks will be re-read even though
+        they were already read before. Defaults to False.
+        :type reload: bool
+        """
         if not reload and self.tasks is not None:
             return
         self.tasks = []
@@ -242,10 +282,33 @@ class BackupManager(dbus.service.Object):
             self.tasks.append(self._get_task(task_section))
 
     def _get_task(self, name):
+        """
+        Reads the task with the specified name from the configuration file and
+        returns a Task object as a representation.
+
+        :param name: The name of the task to load.
+        :type name: string
+
+        :rtype: Task object.
+        """
         task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
 
         def _get(key):
-            return self._get_from_task(name, key)
+            task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
+            default_section = self.configmanager[const.CONF_SECTION_TASKS]
+            if task_section[key] is not None:
+                value = task_section[key]
+            else:
+                value = default_section[key]
+            # this is a bit ugly but necessary. if there is not value specified
+            # for a list in the configuration file (like this: "include ="),
+            # instead of returning an empty list configobj returns [''], which
+            # we have to convert into an empty list manually
+            if (isinstance(value, list) and
+                    len(value) == 1 and
+                    len(value[0]) == 0):
+                value = []
+            return value
 
         # these are overrideable values
         rsync_logfile = _get(const.CONF_KEY_RSYNC_LOGFILE)
@@ -295,7 +358,7 @@ class BackupManager(dbus.service.Object):
                                 filter_file)
                 sys.exit(const.FILE_INVALID)
 
-        backup_scheduling_info = task.BackupSchedulingInfo()
+        task_scheduling_info = task.TaskSchedulingInfo()
         # these are the subsection of the task that contain scheduling
         # information we need to preserve order of the entries of the
         # interval subsection
@@ -303,6 +366,7 @@ class BackupManager(dbus.service.Object):
         for interval_name in interval_names:
             cron_pattern = task_section[
                 const.CONF_SECTION_INTERVALS][interval_name]
+            cron_pattern = cron.Cronjob(cron_pattern)
 
             # converting is necessary as this key cannot be specified as int
             # in the configspec
@@ -319,13 +383,12 @@ class BackupManager(dbus.service.Object):
             keep_age = task_section[const.CONF_SECTION_AGE][interval_name]
             keep_age = interval.Interval(keep_age)
 
-
             interval_info = task.IntervalInfo(name=interval_name,
                                               cron_pattern=cron_pattern,
                                               keep_count=keep_count,
                                               keep_age=keep_age)
 
-            backup_scheduling_info.append(interval_info)
+            task_scheduling_info.append(interval_info)
 
         rsync_logfile_options = None
         if rsync_logfile:
@@ -344,7 +407,7 @@ class BackupManager(dbus.service.Object):
             name=name,
             sources=sources,
             destination=destination,
-            scheduling_info=backup_scheduling_info,
+            scheduling_info=task_scheduling_info,
             create_destination=create_destination,
             one_filesystem=one_filesystem,
             ssh_args=ssh_args,
@@ -353,35 +416,19 @@ class BackupManager(dbus.service.Object):
             rsync_logfile_options=rsync_logfile_options,
             rsync_filter=rsync_filter)
 
-    def _get_from_task(self, name, key):
-        task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
-        default_section = self.configmanager[const.CONF_SECTION_TASKS]
-        if key in task_section:
-            value = task_section[key]
-        else:
-            value = default_section[key]
-        # this is a bit ugly but necessary. if there is not value specified
-        # for a list in the configuration file (like this: "include ="),
-        # instead of returning an empty list configobj returns [''], which we
-        # have to convert into an empty list manually
-        if isinstance(value, list) and len(value) == 1 and len(value[0]) == 0:
-            value = []
-        return value
-
-
-
-
-
     def start(self):
-        self.read_config()
-        self._load_tasks()
+        """
+        Start the backup manager. This means reading and parsing the
+        configuration file and starting the monitoring of the backups.
+        """
+        self.read_config(reload=False)
+        self._load_tasks(reload=False)
 
         logfile_dir = os.path.dirname(self.get_logfile_path())
         if not os.path.exists(logfile_dir):
             logger.debug("Folder containing log file does not exist, will be "
                          "created.")
             os.mkdir(logfile_dir)
-
 
         # now we can change from logging into memory to logging to the logfile
         logging.change_to_logfile_logging(logfile_path=self.get_logfile_path(),
@@ -390,18 +437,17 @@ class BackupManager(dbus.service.Object):
         minutely_event = multiprocessing.Event()
 
         for task in self.tasks:
-            process = multiprocessing.Process(target=self.monitor,
+            process = multiprocessing.Process(target=self._start_monitor,
                                               args=(task, minutely_event))
             process.start()
         minutely_process = multiprocessing.Process(
-            target=self.raise_event_minutely,
+            target=self._raise_event_minutely,
             args=(minutely_event,))
         minutely_process.start()
 
+        self._run_mainloop()
 
-        self.run()
-
-    def run(self):
+    def _run_mainloop(self):
         """
         Start the main loop and handle dbus requests.
         """
@@ -409,38 +455,37 @@ class BackupManager(dbus.service.Object):
         loop = gi.repository.GObject.MainLoop()
         loop.run()
 
-
-    def monitor(self, task, minutely_event):
+    def _start_monitor(self, task, on_event):
         """
-        Periodically check a task for new or expired backups.
+        Periodically check a task for new or expired backups. Checks are
+        triggerred by an event. When started, a check will be started before
+        waiting for the event.
+
+        :param task: The task to monitor.
+        :type task: Task instance
+
+        :param on_event: The event that triggers a check of the task.
+        :type on_event: multiprocessing.Event instance
         """
         logger.debug("start a thread for task %s", task.name)
         while True:
             start = datetime.datetime.now()
             logger.debug("checking task %s at %s", task.name, start)
-            for task in self.tasks:
-                task.create_backups_if_necessary(timestamp=start)
-                task.handle_expired_backups(timestamp=start)
-            minutely_event.wait()
+            task.create_backups_if_necessary(timestamp=start)
+            task.handle_expired_backups(timestamp=start)
+            on_event.wait()
 
-
-
-    def raise_event_minutely(self, event):
+    def _raise_event_minutely(self, event):
         """
-        Raise the event "event" at the beginning of every minute.
+        Raise an event at the beginning of every minute.
+
+        :param event: The event to raise.
+        :type event: multiprocessing.Event instance
         """
         logger.debug("starting minutely event raiser process")
         while True:
             event.clear()
-            now = datetime.datetime.now()
-            if now.minute == 59:
-                wait_seconds = 60 - now.second
-            else:
-                nextmin = now.replace(minute=now.minute + 1,
-                                      second=0,
-                                      microsecond=0)
-                wait_seconds = (nextmin - now).seconds + 1
+            wait_seconds = 60 - datetime.datetime.now().second
             logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
-
             time.sleep(wait_seconds)
             event.set()

@@ -56,6 +56,7 @@ EXIT_ERROR_GENERAL = 14
 EXIT_KEYBOARD_INTERRUPT = 130
 EXIT_NO_CREATE_DESTINATION = 15
 EXIT_INVALID_CONFIG_VALUE = 16
+EXIT_DBUS_ACCESS_DENIED = 17
 
 
 # The name of the symlink to the latest backup.
@@ -72,7 +73,7 @@ SSH_CMD = "ssh"
 
 NAME_META_FILE = "rbackupd.info"
 NAME_BACKUP_SUBFOLDER = "backup"
-PATTERN_BACKUP_FOLDER = "%s_%s_%s.snapshot"
+PATTERN_BACKUP_FOLDER = "{name}_{date}_{interval_name}.snapshot"
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 META_FILE_LINES = 3
@@ -94,3 +95,8 @@ DEFAULT_SCHEME_PATH = "/usr/share/rbackupd/scheme.ini"
 
 DBUS_BUS_NAME = "org.rbackupd.daemon"
 DBUS_OBJECT_PATH_BACKUP_MANAGER = "/org/rbackupd/daemon"
+
+LOGGING_CONSOLE_FORMAT = "[{asctime}] [{levelname}] {message}"
+LOGGING_CONSOLE_DATE_FORMAT = "%H:%M:%S"
+LOGGING_FILE_FORMAT = "[{asctime}] [{levelname}] {filename}: {message}"
+LOGGING_FILE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

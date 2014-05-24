@@ -12,8 +12,13 @@ from rbackupd import levelhandler
 from rbackupd import constants as const
 
 
-
 def change_console_logging_level(loglevel):
+    """
+    Change the loglevel of the console output for all loggers of the package.
+
+    :param loglevel: The new loglevel.
+    :type loglevel: int
+    """
     logger.debug("Changing logging level for console to \"%s\".",
                  logging.getLevelName(loglevel))
     for handler in logging_console_handlers:
@@ -22,6 +27,12 @@ logging.change_console_logging_level = change_console_logging_level
 
 
 def change_file_logging_level(loglevel):
+    """
+    Change the loglevel of the logfile output for all loggers of the package.
+
+    :param loglevel: The new loglevel.
+    :type loglevel: int
+    """
     logger.debug("Changing logging level for log file to \"%s\".",
                  logging.getLevelName(loglevel))
     for handler in logging_file_handlers:
@@ -29,8 +40,18 @@ def change_file_logging_level(loglevel):
 logging.change_file_logging_level = change_file_logging_level
 
 
+def change_to_logfile_logging(logfile_path, loglevel=None):
+    """
+    Change from cached logging to logging to a real logfile. Flushes all
+    messages in the cache to the file.
 
-def change_to_logfile_logging(logfile_path, loglevel):
+    :param logfile_path: The path of the logfile.
+    :type logfile_path: str
+
+    :param loglevel: The loglevel for the logfile. If it is omitted, the
+                     loglevel of the cache is used.
+    :type loglevel: int
+    """
     logger.debug("Switching from logging to memory to logging to file at "
                  "\"%s\" with level \"%s\".",
                  logfile_path,
@@ -38,6 +59,9 @@ def change_to_logfile_logging(logfile_path, loglevel):
     global logging_memory_handler
     if logging_memory_handler is None:
         return
+
+    loglevel = (loglevel if loglevel is not None
+                else logging_memory_handler.level)
 
     logfile_handler = logging.handlers.RotatingFileHandler(
         logfile_path,
@@ -96,8 +120,8 @@ stdout_handler.setLevel(logging.INFO)
 stderr_handler.setLevel(logging.INFO)
 
 console_formatter = logging.Formatter(
-    fmt="[{asctime}] {message}",
-    datefmt="%H:%M:%S",
+    fmt=const.LOGGING_CONSOLE_FORMAT,
+    datefmt=const.LOGGING_CONSOLE_DATE_FORMAT,
     style='{')
 
 stdout_handler.setFormatter(console_formatter)
@@ -118,8 +142,8 @@ logging_memory_handler = logging.handlers.MemoryHandler(
 logging_memory_handler.setLevel(logging.DEBUG)
 
 logfile_formatter = logging.Formatter(
-    fmt="[{asctime}] [{levelname}] {filename}: {message}",
-    datefmt="%Y-%m-%d %H:%M:%S",
+    fmt=const.LOGGING_FILE_FORMAT,
+    datefmt=const.LOGGING_FILE_DATE_FORMAT,
     style='{')
 
 logging_memory_handler.setFormatter(logfile_formatter)
