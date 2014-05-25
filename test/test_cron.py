@@ -5,7 +5,7 @@ import unittest
 import datetime
 import itertools
 
-import cron
+from rbackupd.schedule import cron
 
 
 class Tests(unittest.TestCase):
