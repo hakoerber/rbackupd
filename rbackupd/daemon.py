@@ -7,10 +7,11 @@ import logging
 
 from rbackupd import backupmanager
 from rbackupd import constants as const
+from rbackupd.version import __version__
 
 logger = logging.getLogger(__name__)
 
-VERSION = "%(prog)s v0.5-dev"
+VERSION = "%(prog)s {version}".format(version=__version__)
 
 
 def main(argv):

@@ -6,11 +6,12 @@ import sys
 
 import setuptools
 
-import rbackupd
+# get __version__ from the package.
+exec(open("./rbackupd/version.py").read())
 
 setuptools.setup(
     name = 'rbackupd',
-    version = rbackupd.__version__,
+    version = __version__,
     description = 'A backup program creating snapshots through rsync.',
     long_description = open('README.rst').read(),
     url = 'http://github.com/whatevsz/rbackupd',
