@@ -70,7 +70,10 @@ def _interval_to_oldest_datetime(interval):
             month = 12
         # get the last day of the month by going back one month from the first
         # day of the following month
-        last_day_of_month = (datetime.date(year=year, month=month, day=1) -
+        month_plus_one = (month + 1) % 12
+        last_day_of_month = (datetime.date(year=year,
+                                           month=month_plus_one,
+                                           day=1) -
                              datetime.timedelta(days=1)).day
         day = datetime.date.today().day
         if day > last_day_of_month:
