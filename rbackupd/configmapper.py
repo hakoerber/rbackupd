@@ -26,8 +26,6 @@ def _write_config_after(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         retval = func(self, *args, **kwargs)
-        print("writing config:")
-        print(self.configmanager)
         self.write_config()
         return retval
     return wrapper
@@ -274,9 +272,11 @@ class ConfigMapper(object):
             const.CONF_KEY_SSH_ARGS] = value
 
     class TaskSubsection(object):
-        def __init__(self, outer, name):
+        def __init__(self, outer, name, fallback_on_default):
             self.outer = outer
             self.name = name
+
+            self.fallback_on_default = fallback_on_default
 
             self.section_dict = outer.configmanager[const.CONF_SECTION_TASKS][
                 name]
@@ -287,7 +287,7 @@ class ConfigMapper(object):
         def rsync_logfile(self):
             value = self.section_dict[
                 const.CONF_KEY_RSYNC_LOGFILE]
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_rsync_logfile
             return value
 
@@ -301,7 +301,7 @@ class ConfigMapper(object):
         def rsync_logfile_name(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_RSYNC_LOGFILE_NAME])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_rsync_logfile_name
             return value
 
@@ -315,7 +315,7 @@ class ConfigMapper(object):
         def rsync_logfile_format(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_RSYNC_LOGFILE_FORMAT])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_rsync_logfile_format
             return value
 
@@ -329,7 +329,7 @@ class ConfigMapper(object):
         def filter_patterns(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_FILTER_PATTERNS])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_filters
             return value
 
@@ -343,7 +343,7 @@ class ConfigMapper(object):
         def include_patterns(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_INCLUDE_PATTERNS])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_includes
             return value
 
@@ -357,7 +357,7 @@ class ConfigMapper(object):
         def include_files(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_INCLUDE_FILE])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_include_files
             return value
 
@@ -371,7 +371,7 @@ class ConfigMapper(object):
         def exclude_patterns(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_EXCLUDE_PATTERNS])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_excludes
             return value
 
@@ -385,7 +385,7 @@ class ConfigMapper(object):
         def exclude_files(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_EXCLUDE_FILE])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_exclude_files
             return value
 
@@ -399,7 +399,7 @@ class ConfigMapper(object):
         def create_destination(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_CREATE_DESTINATION])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_create_destination
             return value
 
@@ -413,7 +413,7 @@ class ConfigMapper(object):
         def one_filesystem(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_ONE_FILESYSTEM])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_one_filesystem
             return value
 
@@ -427,7 +427,7 @@ class ConfigMapper(object):
         def rsync_args(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_RSYNC_ARGS])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_rsync_args
             return value
 
@@ -441,7 +441,7 @@ class ConfigMapper(object):
         def ssh_args(self):
             value = self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_SSH_ARGS])
-            if value is None:
+            if value is None and self.fallback_on_default is True:
                 return self.outer.default_ssh_args
             return value
 
@@ -470,8 +470,6 @@ class ConfigMapper(object):
         @_write_config_after
         def destination(self, value):
             self.section_dict[const.CONF_KEY_DESTINATION] = value
-            #self.outer.configmanager[const.CONF_SECTION_TASKS][
-            #    self.name] = self.section_dict
 
         @property
         def interval_names(self):
@@ -480,8 +478,8 @@ class ConfigMapper(object):
         def get_subsection(self, name):
             return self.section_dict[name]
 
-    def task(self, name):
-        return self.TaskSubsection(self, name)
+    def task(self, name, fallback_on_default=False):
+        return self.TaskSubsection(self, name, fallback_on_default)
 
     @property
     def task_names(self):

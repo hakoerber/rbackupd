@@ -55,19 +55,697 @@ class BackupManager(dbus.service.Object):
 
         self.tasks = None
 
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_logfile_path(self):
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetLogfilePath(self):
         """
         Return the path to the logfile.
+
+        :rtype: str
         """
         return self.configmapper.logfile_path
 
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_logfile_path(self, path):
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def SetLogfilePath(self, path):
         """
         Set the path to the logfile.
+
+        :param path: the new path
+        :type path: str
         """
         self.configmapper.logfile_path = path
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetLoglevel(self):
+        """
+        Return the loglevel in human readble form.
+
+        :rtype: str
+        """
+        return self.configmapper.loglevel
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def SetLoglevel(self, loglevel):
+        """
+        Set the loglevel in human readable form. Valid values are:
+            * debug
+            * verbose
+            * default
+            * quiet
+
+        :param loglevel: the new loglevel
+        :type loglevel: str
+        """
+        self.configmapper.loglevel = loglevel
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetRsyncCommand(self):
+        """
+        Return the rsync command used.
+
+        :rtype: str
+        """
+        return self.configmapper.rsync_command
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def SetRsyncCommand(self, command):
+        """
+        Set the rsync command that should be used.
+
+        :param command: the new command
+        :type command: str
+        """
+        self.configmapper.rsync_command = command
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='b')
+    def GetDefaultRsyncLogfile(self):
+        """
+        Return a bool specifying whether a rsync logfile shall be used.
+
+        :rtype: bool
+        """
+        return self.configmapper.default_rsync_logfile
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='b')
+    def SetDefaultRsyncLogfile(self, value):
+        """
+        Set the flag specifying whether a rsync logfile shall be used.
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.default_rsync_logfile = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetDefaultRsyncLogfileName(self):
+        """
+        Return the name of the rsync logfile.
+
+        .. note::
+            Make sure to see whether the log will be created to begin with
+            through :func:`GetDefaultRsyncLogfile` and
+            :func:`GetTaskRsyncLogfile`.
+
+        :rtype: str
+        """
+        return self.configmapper.default_rsync_logfile
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def SetDefaultRsyncLogfileName(self, name):
+        """
+        Set the name of the rsync logfile.
+
+        .. note::
+            Make sure to see whether the log will be created to begin with
+            through :func:`GetDefaultRsyncLogfile` and
+            :func:`GetTaskRsyncLogfile`.
+
+        :param name: the new name
+        :type name: str
+        """
+        self.configmapper.default_rsync_logfile = name
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetDefaultRsyncLogfileFormat(self):
+        """
+        Return the format used for the rsync logfile.
+
+        .. note::
+            See `rsync(1)` for details about possible formatting.
+
+        :rtype: str
+        """
+        return self.configmapper.default_rsync_logfile_format
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def SetDefaultRsyncLogfileFormat(self, format):
+        """
+        Set the format used in the rsync logfile.
+
+        .. note::
+            See `rsync(1)` for details about possible formatting.
+
+        .. warning::
+            Setting this to an invalid value might render the rsync logfile
+            useless.
+
+        :param format: the new format
+        :type format: str
+        """
+        self.configmapper.default_rsync_logfile_format = format
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetDefaultFilters(self):
+        """
+        Return the default rsync filters. This is a list of strings that will
+        be passed separately to the `--filter` option of `rsync(1)`
+
+        :rtype: list of str
+        """
+        return self.configmapper.default_filters
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='as')
+    def SetDefaultFilters(self, filters):
+        """
+        Set the default rsync filters.
+
+        .. warning::
+            Setting the filter to certain values might exclude all files from
+            being backed up.
+
+        :param filters: the new filters
+        :type filters: list or str
+        """
+        self.configmapper.default_filters = filters
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetDefaultIncludes(self):
+        """
+        Get the default patterns passed to `rsync(1)` via the `--inlcude`
+        option.
+
+        :rtype: list of str
+        """
+        return self.configmapper.default_includes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='as')
+    def SetDefaultIncludes(self, includes):
+        """
+        Set the default patterns passed to `rsync(1)` via the `--include`
+        option.
+
+        :param includes: the new include patterns
+        :type includes: list of str
+        """
+        self.configmapper.default_includes = includes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetDefaultIncludeFiles(self):
+        """
+        Return a list all file paths passed to `rsync(1)` via the
+        `--include-file` option.
+
+        :rtype: list of str
+        """
+        return self.configmapper.default_include_files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='as')
+    def SetDefaultIncludeFiles(self, files):
+        """
+        Set the list of file paths passed to `rsync(1)` via the `--include-file`
+        option.
+
+        :param files: the new list of files
+        :type files: list of str
+        """
+        self.configmapper.default_include_files = files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetDefaultExcludes(self):
+        """
+        Get the default patterns passed to `rsync(1)` via the `--exclude`
+        option.
+
+        :rtype: list of str
+        """
+        return self.configmapper.default_excludes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='as')
+    def SetDefaultExcludes(self, excludes):
+        """
+        Set the default patterns passed to `rsync(1)` via the `--exclude`
+        option.
+
+        :param excludes: the new exclude patterns
+        :type excludes: list of str
+        """
+        self.configmapper.default_includes = excludes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetDefaultExcludeFiles(self):
+        """
+        Return a list all file paths passed to `rsync(1)` via the
+        `--exclude-file` option.
+
+        :rtype: list of str
+        """
+        return self.configmapper.default_exclude_files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='as')
+    def SetDefaultExcludeFiles(self, files):
+        """
+        Set the list of file paths passed to `rsync(1)` via the `--exclude-file`
+        option.
+
+        :param files: the new list of files
+        :type files: list of str
+        """
+        self.configmapper.default_exclude_files = files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='b')
+    def GetDefaultCreateDestination(self):
+        """
+        Return the switch that specifies whether the destination directory shall
+        be created if it does not exist.
+
+        :rtype: bool
+        """
+        return self.configmapper.default_create_destination
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='b')
+    def SetDefaultCreateDestination(self, value):
+        """
+        Set the switch that specifies whether the destination directory shall be
+        created if it does not exist.
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.default_create_destination = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='b')
+    def GetDefaultOneFilesystem(self):
+        """
+        Return the switch that specifies whether rsync should cross filesystem
+        boundaries.
+
+        :rtype: bool
+        """
+        return self.configmapper.default_one_filesystem
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='b')
+    def SetDefaultOneFilesystem(self, value):
+        """
+        Set the switch that specifies whether rsync should cross filesystem
+        boundaries.
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.default_one_filesystem = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
+    def GetDefaultSSHArgs(self):
+        """
+        Get the arguments that will be passed to ssh when creating remote
+        backups.
+
+        :rtype: str
+        """
+        return self.configmapper.default_ssh_args
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='b')
+    def SetDefaultSSHArgs(self, args):
+        """
+        Set the arguments that will be passed to ssh when creating remote
+        backups.
+
+        :param args: the new arguments
+        :type args: str
+        """
+        self.configmapper.default_ssh_args = args
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskSources(self, task):
+        """
+        Return a list of the path of all sources of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).sources
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskSources(self, task, sources):
+        """
+        Set the sources of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param sources: the new sources
+        :type sources: list of str
+        """
+        self.configmapper.task(task).sources = sources
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskDestination(self, task):
+        """
+        Return the path of the destination of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).destination
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskDestination(self, task, destination):
+        """
+        Set the desination of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param destination: the new destination
+        :type destination: str
+        """
+        self.configmapper.task(task).destination = destination
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='b')
+    def GetTaskRsyncLogfile(self, task):
+        """
+        Return a bool specifying whether a rsync logfile shall be used, or
+        None if the task has no such value and you have to fall back on the
+        default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: bool or None
+        """
+        return self.configmapper.task(task).rsync_logfile
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sb')
+    def SetTaskRsyncLogfile(self, task, value):
+        """
+        Set the flag specifying whether a rsync logfile shall be used.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.task(task).rsync_logfile = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskRsyncLogfileName(self, task):
+        """
+        Return the name of the rsync logfile or None if the task has no such
+        value and you have to fall back on the default values.
+
+        .. note::
+            Make sure to see whether the log will be created to begin with
+            through :func:`GetTaskRsyncLogfile` and
+            :func:`GetTaskRsyncLogfile`.d.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: str or None
+        """
+        return self.configmapper.task(task).rsync_logfile
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskRsyncLogfileName(self, task, name):
+        """
+        Set the name of the rsync logfile.
+
+        .. note::
+            Make sure to see whether the log will be created to begin with
+            through :func:`GetTaskRsyncLogfile` and :func:`GetTaskRsyncLogfile`.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param name: the new name
+        :type name: str
+        """
+        self.configmapper.task(task).rsync_logfile = name
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskRsyncLogfileFormat(self, task):
+        """
+        Return the format used for the rsync logfile or None if the task has no
+        such value and you have to fall back on the default values.
+
+
+        .. note::
+            See `rsync(1)` for details about possible formatting.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: str or None
+        """
+        return self.configmapper.task(task).rsync_logfile_format
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskRsyncLogfileFormat(self, task, format):
+        """
+        Set the format used in the rsync logfile.
+
+        .. note::
+            See `rsync(1)` for details about possible formatting.
+
+        .. warning::
+            Setting this to an invalid value might render the rsync logfile
+            useless.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param format: the new format
+        :type format: str
+        """
+        self.configmapper.task(task).rsync_logfile = format
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskFilters(self, task):
+        """
+        Return the default rsync filters
+        and you have to fall back on the default values. This is a list of
+        strings that will be passed separately to the `--filter` option of
+        `rsync(1)`
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: list of str or None
+        """
+        return self.configmapper.task(task).filter_patterns
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskFilters(self, task, filters):
+        """
+        Set the default rsync filters.
+
+        .. warning::
+            Setting the filter to certain values might exclude all files from
+            being backed up.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param filters: the new filters
+        :type filters: list or str
+        """
+        self.configmapper.task(task).filter_patterns = filters
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskIncludes(self, task):
+        """
+        Get the default patterns passed to `rsync(1)` via the `--inlcude`
+        option  and you have to fall back
+        on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: list of str or None
+        """
+        return self.configmapper.task(task).include_patterns
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskIncludes(self, task, includes):
+        """
+        Set the default patterns passed to `rsync(1)` via the `--include`
+        option.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param includes: the new include patterns
+        :type includes: list of str
+        """
+        self.configmapper.task(task).include_patterns = includes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskIncludeFiles(self, task):
+        """
+        Return a list all file paths passed to `rsync(1)` via the
+        `--include-file` option  and you
+        have to fall back on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: list of str or None
+        """
+        return self.configmapper.task(task).include_files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskIncludeFiles(self, task, files):
+        """
+        Set the list of file paths passed to `rsync(1)` via the `--include-file`
+        option.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param files: the new list of files
+        :type files: list of str
+        """
+        self.configmapper.task(task).include_files = files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskExcludes(self, task):
+        """
+        Get the default patterns passed to `rsync(1)` via the `--exclude`
+        option  and you have to fall back
+        on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: list of str or None
+        """
+        return self.configmapper.task(task).exclude_patterns
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskExcludes(self, task, excludes):
+        """
+        Set the default patterns passed to `rsync(1)` via the `--exclude`
+        option.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param excludes: the new exclude patterns
+        :type excludes: list of str
+        """
+        self.configmapper.task(task).exclude_patterns = excludes
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='as')
+    def GetTaskExcludeFiles(self, task):
+        """
+        Return a list all file paths passed to `rsync(1)` via the
+        `--exclude-file` option  and you
+        have to fall back on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: list of str or None
+        """
+        return self.configmapper.task(task).exclude_files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sas')
+    def SetTaskExcludeFiles(self, task, files):
+        """
+        Set the list of file paths passed to `rsync(1)` via the `--exclude-file`
+        option.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param files: the new list of files
+        :type files: list of str
+        """
+        self.configmapper.task(task).exclude_files = files
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='b')
+    def GetTaskCreateDestination(self, task):
+        """
+        Return the switch that specifies whether the destination directory shall
+        be created if it does not exist
+        and you have to fall back on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: bool or None
+        """
+        return self.configmapper.task(task).create_destination
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sb')
+    def SetTaskCreateDestination(self, task, value):
+        """
+        Set the switch that specifies whether the destination directory shall be
+        created if it does not exist.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.task(task).create_destination = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='b')
+    def GetTaskOneFilesystem(self, task):
+        """
+        Return the switch that specifies whether rsync should cross filesystem
+        boundaries  and you have to fall
+        back on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: bool or None
+        """
+        return self.configmapper.task(task).one_filesystem
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='sb')
+    def SetTaskOneFilesystem(self, task, value):
+        """
+        Set the switch that specifies whether rsync should cross filesystem
+        boundaries.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param value: the new value
+        :type value: bool
+        """
+        self.configmapper.task(task).one_filesystem = value
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskSSHArgs(self, task):
+        """
+        Get the arguments that will be passed to ssh when creating remote
+        backups  and you have to fall back
+        on the default values.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :rtype: str or None
+        """
+        return self.configmapper.task(task).ssh_args
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskSSHArgs(self, task, args):
+        """
+        Set the arguments that will be passed to ssh when creating remote
+        backups.
+
+        :param task: the name of the task to work on
+        :type task: str
+        """
+        self.configmapper.task(task).ssh_args = args
 
     def _load_tasks(self, reload=False):
         """
@@ -75,8 +753,11 @@ class BackupManager(dbus.service.Object):
         corresponding objects. By default, it will not re-read the tasks
         if they were already read before.
 
+        :param task: the name of the task to work on
+        :type task: str
+
         :param reload: If set to True, the tasks will be re-read even though
-        they were already read before. Defaults to False.
+            they were already read before. Defaults to False.
         :type reload: bool
         """
         if not reload and self.tasks is not None:
@@ -96,7 +777,7 @@ class BackupManager(dbus.service.Object):
         :rtype: Task object.
         """
 
-        task_section = self.configmapper.task(name)
+        task_section = self.configmapper.task(name, fallback_on_default=True)
 
         # these are overrideable values
         rsync_logfile = task_section.rsync_logfile
@@ -213,7 +894,7 @@ class BackupManager(dbus.service.Object):
         self.configmapper.read_config(reload=False)
         self._load_tasks(reload=False)
 
-        logfile_dir = os.path.dirname(self.get_logfile_path())
+        logfile_dir = os.path.dirname(self.configmapper.logfile_path)
         if not os.path.exists(logfile_dir):
             logger.debug("Folder containing log file does not exist, will be "
                          "created.")
@@ -221,7 +902,7 @@ class BackupManager(dbus.service.Object):
 
         # now we can change from logging into memory to logging to the logfile
         logging.change_to_logfile_logging(
-            logfile_path=self.get_logfile_path(),
+            logfile_path=self.configmapper.logfile_path,
             loglevel=self.configmapper.loglevel_as_int)
 
         minutely_event = multiprocessing.Event()
