@@ -1,25 +1,27 @@
 #!/usr/bin/env bash
-# This script runs all tests in ./tests, and adds ./src to PYTHONPATH
-# before doing so.
-
-retval=0
 
 ROOTDIR="$(dirname $0)"
-TESTDIR="tests"
 PKGSDIR="rbackupd"
+TESTDIR="test"
 
-TESTPATTERN='test_*.py'
+failed=0
 
-PYTHONPATH="$ROOTDIR/$PKGSDIR" \
-python -m unittest discover \
---start-directory "$ROOTDIR/$TESTDIR" \
---pattern "$TESTPATTERN" \
---top-level-directory "$ROOTDIR"
+test_tox() {
+    tox
+}
 
-retval=$?
+test_pep8() {
+    pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" \
+        --filename="*.py" \
+        --count \
+        --ignore=E203,E241 \
+        --max-line-length=80 \
+        --exclude=.ropeproject
+}
 
-pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" --filename="*.py" --count --ignore=E203,E241 --max-line-length=80 --exclude=.ropeproject
-[[ $? != 0 ]] && retval=10 || echo "pep8: OK"
+test_tox && { echo "tox: OK" ; } || { echo "tox: FAILED" ; failed=1 ; }
+test_pep8 && { echo "pep8: OK" ; } || { echo "pep8: FAILED" ; failed=1 ; }
 
-[[ $retval == 0 ]] && echo "All tests passed." || echo "Tests failed."
-exit $retval
+[[ $failed == 0 ]] && echo "All tests passed." || echo "Tests failed."
+
+exit $failed
