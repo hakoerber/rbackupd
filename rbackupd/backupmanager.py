@@ -69,7 +69,6 @@ class BackupManager(dbus.service.Object):
         """
         self.configmapper.logfile_path = path
 
-
     def _load_tasks(self, reload=False):
         """
         Parses the tasks section of the configuration file and creates
@@ -153,7 +152,8 @@ class BackupManager(dbus.service.Object):
         # interval subsection
         interval_names = task_section.interval_names
         for interval_name in interval_names:
-            cron_pattern = task_section.get_subsection(const.CONF_SECTION_INTERVALS)[interval_name]
+            cron_pattern = task_section.get_subsection(
+                const.CONF_SECTION_INTERVALS)[interval_name]
             cron_pattern = cron.Cronjob(cron_pattern)
 
             # converting is necessary as this key cannot be specified as int
@@ -168,7 +168,8 @@ class BackupManager(dbus.service.Object):
                                 const.CONF_SECTION_KEEP,
                                 name)
 
-            keep_age = task_section.get_subsection(const.CONF_SECTION_AGE)[interval_name]
+            keep_age = task_section.get_subsection(const.CONF_SECTION_AGE)[
+                interval_name]
             keep_age = interval.Interval(keep_age)
 
             interval_info = task.IntervalInfo(name=interval_name,
@@ -219,8 +220,9 @@ class BackupManager(dbus.service.Object):
             os.mkdir(logfile_dir)
 
         # now we can change from logging into memory to logging to the logfile
-        logging.change_to_logfile_logging(logfile_path=self.get_logfile_path(),
-                                          loglevel=self.configmapper.loglevel_as_int)
+        logging.change_to_logfile_logging(
+            logfile_path=self.get_logfile_path(),
+            loglevel=self.configmapper.loglevel_as_int)
 
         minutely_event = multiprocessing.Event()
 

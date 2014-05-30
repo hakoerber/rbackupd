@@ -54,7 +54,6 @@ class ConfigMapper(object):
             value = []
         return value
 
-
     def read_config(self, reload=False):
         """
         Reads the configuration file specified in the constructor. By default
@@ -96,7 +95,6 @@ class ConfigMapper(object):
                              "be written back")
         self.configmanager.write()
 
-
     def reload_config(self):
         """
         Reload the configuration file from the path given at startup.
@@ -131,8 +129,6 @@ class ConfigMapper(object):
     @property
     def loglevel_as_int(self):
         return LOGLEVEL_MAPPING[self.loglevel]
-
-
 
     @property
     def rsync_command(self):

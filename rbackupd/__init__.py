@@ -13,6 +13,7 @@ import rbackupd.constants as const
 
 __version__ = '0.5-dev'
 
+
 def change_console_logging_level(loglevel):
     """
     Change the loglevel of the console output for all loggers of the package.
