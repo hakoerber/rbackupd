@@ -32,7 +32,7 @@ CONF_KEY_SSH_ARGS = "ssh_args"
 
 CONF_SECTION_TASKS = "tasks"
 CONF_KEY_DESTINATION = "destination"
-CONF_KEY_SOURCE = "sources"
+CONF_KEY_SOURCES = "sources"
 CONF_KEY_TASKNAME = "name"
 
 CONF_SECTION_INTERVALS = "intervals"

@@ -15,24 +15,12 @@ import dbus.mainloop.glib
 import gi.repository.GObject
 import multiprocessing
 
+from rbackupd import configmapper
 from rbackupd import constants as const
 from rbackupd import task
 from rbackupd.cmd import rsync
-from rbackupd.config import configmanager
 from rbackupd.schedule import cron
 from rbackupd.schedule import interval
-
-LOGLEVEL_MAPPING = {
-    "quiet"   : logging.WARNING,
-    "default" : logging.INFO,
-    "verbose" : logging.VERBOSE,
-    "debug"   : logging.DEBUG}
-
-LOGLEVEL_VALUES = list(LOGLEVEL_MAPPING.keys())
-
-LOGLEVEL_MAPPING_REVERSE = {v: k for k, v in LOGLEVEL_MAPPING.items()}
-
-LOGLEVEL_VALUES_REVERSE = list(LOGLEVEL_MAPPING_REVERSE.keys())
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +29,7 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 class BackupManager(dbus.service.Object):
     """
-    This class is responsible for reading the rbackupd configuration file,
+    This class is responsible for exposing the rbackupd configuration file,
     starting all tasks specified in it and provide methods to modify these
     tasks while keeping them in sync with the configuraiton file.
 
@@ -63,206 +51,24 @@ class BackupManager(dbus.service.Object):
         if not os.path.exists(config_path):
             logger.critical("Config file not found. Aborting.")
             sys.exit(const.EXIT_CONFIG_FILE_NOT_FOUND)
+        self.configmapper = configmapper.ConfigMapper(config_path)
 
-        self.config_path = config_path
         self.tasks = None
-        self.configmanager = None
-
-    def read_config(self, reload=False):
-        """
-        Reads the configuration file specified in the constructor. By default
-        it will not re-read the configuration file if it was already read.
-
-        :param reload: If True, forces a re-read of the configuration file
-                       even when it was already read. Defaults to False.
-        :type reload: bool
-        """
-        if (self.configmanager is not None and
-                not reload):
-            return
-        logger.debug("Starting configuration file parsing.")
-        try:
-            self.configmanager = configmanager.ConfigManager(
-                path=self.config_path, configspec=const.DEFAULT_SCHEME_PATH)
-
-        except IOError as error:
-            logger.critical("Error accessing a file: %s", str(error))
-            exit(const.EXIT_FILE_NOT_FOUND)
-        except configmanager.ValidationError as error:
-            logger.critical("The validation of the configuration file failed. "
-                            "Message:\n%s", str(error))
-            exit(const.EXIT_CONFIG_FILE_INVALID)
-        except configmanager.ConfigError as err:
-            logger.critical("Invalid config file: error line %s (\"%s\"): %s",
-                            err.line_number,
-                            err.line,
-                            err.msg)
-            exit(const.EXIT_CONFIG_FILE_INVALID)
-        logger.debug("Config file parsed successfully.")
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def write_config(self):
-        """
-        Write the configuration file to disk.
-        """
-        self.configmanager.write()
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def reload_config(self):
-        """
-        Reload the configuration file from the path given at startup.
-        """
-        self.configmanager.reload()
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_config(self):
-        """
-        Return a dict containing the outline of the configuration file.
-        """
-        return dict(self.configmanager)
 
     @dbus.service.method(const.DBUS_BUS_NAME)
     def get_logfile_path(self):
         """
         Return the path to the logfile.
         """
-        return self.configmanager.get(
-            const.CONF_SECTION_LOGGING).get(
-            const.CONF_KEY_LOGFILE_PATH)
+        return self.configmapper.logfile_path
 
     @dbus.service.method(const.DBUS_BUS_NAME)
     def set_logfile_path(self, path):
         """
         Set the path to the logfile.
         """
-        logger.debug("set_logfile_path %s", path)
-        self.configmanager[
-            const.CONF_SECTION_LOGGING][const.CONF_KEY_LOGFILE_PATH] = path
-        self.write_config()
+        self.configmapper.logfile_path = path
 
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_loglevel_human_readable(self):
-        """
-        Return the loglevel in human readable format like in the configuration
-        file.
-        """
-        level = self.configmanager[
-            const.CONF_SECTION_LOGGING][const.CONF_KEY_LOGLEVEL]
-        if level not in LOGLEVEL_VALUES:
-            logger.critical("Invalid value \"%s\" for %s. Valid values: %s. "
-                            "Aborting.",
-                            level,
-                            const.CONF_KEY_LOGLEVEL,
-                            ",".join([str(v) for v in LOGLEVEL_VALUES]))
-            sys.exit(const.EXIT_INVALID_CONFIG_FILE)
-        return level
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_loglevel(self):
-        """
-        Return the loglevel as used by the logging module.
-        """
-        level = self.get_loglevel_human_readable()
-        return LOGLEVEL_MAPPING[level]
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_loglevel_human_readable(self, loglevel):
-        """
-        Set the loglevel in human readable format like in the configuration
-        file.
-        """
-        if loglevel not in LOGLEVEL_VALUES:
-            logger.critical("Cannot set loglevel to invalid value \"%s\"",
-                            loglevel)
-            sys.exit(const.EXIT_ERROR_GENERAL)
-
-        logging.change_file_logging_level(loglevel)
-
-        self.configmanager[const.CONF_SECTION_LOGGING][
-            const.CONF_KEY_LOGLEVEL] = LOGLEVEL_MAPPING_REVERSE[loglevel]
-        self.write_config()
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_loglevel(self, loglevel):
-        """
-        Set the loglevel as used by the logging module.
-        """
-        if loglevel not in LOGLEVEL_VALUES_REVERSE:
-            logger.critical("Cannot set loglevel to invalid value \"%s\"",
-                            loglevel)
-            sys.exit(const.EXIT_ERROR_GENERAL)
-        self.set_loglevel(LOGLEVEL_MAPPING_REVERSE[loglevel])
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_rsync_command(self):
-        """
-        Return the rsync command.
-        """
-        return self.configmanager[
-            const.CONF_SECTION_RSYNC][const.CONF_KEY_RSYNC_CMD]
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_rsync_command(self, command):
-        """
-        Set the rsync command.
-        """
-        self.configmanager[const.CONF_SECTION_RSYNC][
-            const.CONF_KEY_RSYNC_CMD] = command
-        self.write_config()
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_task_default(self, key):
-        """
-        Get the default value "key" for all tasks.
-        """
-        return self[const.CONF_SECTION_TASKS][key]
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_task_default(self, key, value):
-        """
-        Set the default value "key" for all tasks.
-        """
-        self[const.CONF_SECTION_TASKS][key] = value
-        self._load_tasks(reload=False)
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_task_option(self, taskname, option):
-        """
-        Get the option for a task.
-        """
-        return self[const.CONF_SECTION_TASKS][taskname][option]
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def set_task_option(self, taskname, option, value):
-        """
-        Set the option for a task.
-        """
-        self[const.CONF_SECTION_TASKS][taskname][option] = value
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_task_names(self):
-        """
-        Get all task names.
-        """
-        self._load_tasks(reload=False)
-        return self.configmanager[const.CONF_SECTION_TASKS].section
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def get_task(self, name):
-        """
-        Get the task with the given name.
-        """
-        self._load_tasks(reload=False)
-        return self.tasks[name]
-
-    @dbus.service.method(const.DBUS_BUS_NAME)
-    def rename_task(self, oldname, newname):
-        """
-        Rename the task with name "oldname" to "newname"
-        """
-        task_section = self.configmanager[const.CONF_SECTION_TASKS]
-        task_section.rename(oldname, newname)
-        self._load_tasks(reload=True)
 
     def _load_tasks(self, reload=False):
         """
@@ -277,9 +83,8 @@ class BackupManager(dbus.service.Object):
         if not reload and self.tasks is not None:
             return
         self.tasks = []
-        tasks_section = self.configmanager[const.CONF_SECTION_TASKS]
-        for task_section in tasks_section.sections:
-            self.tasks.append(self._get_task(task_section))
+        for task_name in self.configmapper.task_names:
+            self.tasks.append(self._get_task(task_name))
 
     def _get_task(self, name):
         """
@@ -291,44 +96,28 @@ class BackupManager(dbus.service.Object):
 
         :rtype: Task object.
         """
-        task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
 
-        def _get(key):
-            task_section = self.configmanager[const.CONF_SECTION_TASKS][name]
-            default_section = self.configmanager[const.CONF_SECTION_TASKS]
-            if task_section[key] is not None:
-                value = task_section[key]
-            else:
-                value = default_section[key]
-            # this is a bit ugly but necessary. if there is not value specified
-            # for a list in the configuration file (like this: "include ="),
-            # instead of returning an empty list configobj returns [''], which
-            # we have to convert into an empty list manually
-            if (isinstance(value, list) and
-                    len(value) == 1 and
-                    len(value[0]) == 0):
-                value = []
-            return value
+        task_section = self.configmapper.task(name)
 
         # these are overrideable values
-        rsync_logfile = _get(const.CONF_KEY_RSYNC_LOGFILE)
-        rsync_logfile_name = _get(const.CONF_KEY_RSYNC_LOGFILE_NAME)
-        rsync_logfile_format = _get(const.CONF_KEY_RSYNC_LOGFILE_FORMAT)
+        rsync_logfile = task_section.rsync_logfile
+        rsync_logfile_name = task_section.rsync_logfile_name
+        rsync_logfile_format = task_section.rsync_logfile_format
 
-        filter_patterns = _get(const.CONF_KEY_FILTER_PATTERNS)
-        include_patterns = _get(const.CONF_KEY_INCLUDE_PATTERNS)
-        include_files = _get(const.CONF_KEY_INCLUDE_FILE)
-        exclude_patterns = _get(const.CONF_KEY_EXCLUDE_PATTERNS)
-        exclude_files = _get(const.CONF_KEY_EXCLUDE_FILE)
+        filter_patterns = task_section.filter_patterns
+        include_patterns = task_section.include_patterns
+        include_files = task_section.include_files
+        exclude_patterns = task_section.exclude_patterns
+        exclude_files = task_section.exclude_files
 
-        create_destination = _get(const.CONF_KEY_CREATE_DESTINATION)
-        one_filesystem = _get(const.CONF_KEY_ONE_FILESYSTEM)
-        rsync_args = _get(const.CONF_KEY_RSYNC_ARGS)
-        ssh_args = _get(const.CONF_KEY_SSH_ARGS)
+        create_destination = task_section.create_destination
+        one_filesystem = task_section.one_filesystem
+        rsync_args = task_section.rsync_args
+        ssh_args = task_section.ssh_args
 
-        # these values are unique for every task
-        destination = task_section[const.CONF_KEY_DESTINATION]
-        sources = task_section[const.CONF_KEY_SOURCE]
+        # these values are unique for every task_section
+        destination = task_section.destination
+        sources = task_section.sources
 
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
@@ -362,16 +151,15 @@ class BackupManager(dbus.service.Object):
         # these are the subsection of the task that contain scheduling
         # information we need to preserve order of the entries of the
         # interval subsection
-        interval_names = task_section[const.CONF_SECTION_INTERVALS].keys()
+        interval_names = task_section.interval_names
         for interval_name in interval_names:
-            cron_pattern = task_section[
-                const.CONF_SECTION_INTERVALS][interval_name]
+            cron_pattern = task_section.get_subsection(const.CONF_SECTION_INTERVALS)[interval_name]
             cron_pattern = cron.Cronjob(cron_pattern)
 
             # converting is necessary as this key cannot be specified as int
             # in the configspec
-            keep_count = int(task_section[
-                const.CONF_SECTION_KEEP][interval_name])
+            keep_count = int(task_section.get_subsection(
+                const.CONF_SECTION_KEEP)[interval_name])
 
             if keep_count <= 0:
                 logger.critical("Maximum value of key \"%s\" in section \"%s\" "
@@ -380,7 +168,7 @@ class BackupManager(dbus.service.Object):
                                 const.CONF_SECTION_KEEP,
                                 name)
 
-            keep_age = task_section[const.CONF_SECTION_AGE][interval_name]
+            keep_age = task_section.get_subsection(const.CONF_SECTION_AGE)[interval_name]
             keep_age = interval.Interval(keep_age)
 
             interval_info = task.IntervalInfo(name=interval_name,
@@ -411,7 +199,7 @@ class BackupManager(dbus.service.Object):
             create_destination=create_destination,
             one_filesystem=one_filesystem,
             ssh_args=ssh_args,
-            rsync_cmd=self.get_rsync_command(),
+            rsync_cmd=self.configmapper.rsync_command,
             rsync_args=rsync_args,
             rsync_logfile_options=rsync_logfile_options,
             rsync_filter=rsync_filter)
@@ -421,7 +209,7 @@ class BackupManager(dbus.service.Object):
         Start the backup manager. This means reading and parsing the
         configuration file and starting the monitoring of the backups.
         """
-        self.read_config(reload=False)
+        self.configmapper.read_config(reload=False)
         self._load_tasks(reload=False)
 
         logfile_dir = os.path.dirname(self.get_logfile_path())
@@ -432,7 +220,7 @@ class BackupManager(dbus.service.Object):
 
         # now we can change from logging into memory to logging to the logfile
         logging.change_to_logfile_logging(logfile_path=self.get_logfile_path(),
-                                          loglevel=self.get_loglevel())
+                                          loglevel=self.configmapper.loglevel_as_int)
 
         minutely_event = multiprocessing.Event()
 
