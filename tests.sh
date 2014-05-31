@@ -2,6 +2,7 @@
 
 ROOTDIR="$(dirname $0)"
 PKGSDIR="rbackupd"
+PKGSDIR2="rbackupc"
 TESTDIR="test"
 
 failed=0
@@ -11,7 +12,7 @@ test_tox() {
 }
 
 test_pep8() {
-    pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" \
+    pep8 "$ROOTDIR/$PKGSDIR" "$ROOTDIR/$TESTDIR" "$ROOTDIR/$PKGSDIR2" \
         --filename="*.py" \
         --count \
         --ignore=E203,E241 \
