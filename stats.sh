@@ -7,3 +7,5 @@ echo "SLOC:            $(cat $(find rbackupd/ -name '*.py') | grep -v '^[[:space
 echo "Blank lines:     $(cat $(find rbackupd/ -name '*.py') | grep '^[[:space:]]*$' | wc -l)"
 echo "Comment lines:   $(cat $(find rbackupd/ -name '*.py') | grep '^[[:space:]]*#.*$' | wc -l)"
 echo "Lines overall:   $(cat $(find rbackupd/ -name '*.py') | wc -l)"
+
+echo "All files:       $(find . ! -wholename "*/build/*" ! -wholename "*/__pycache__/*" ! -wholename "*/.*" -type f | xargs cat | wc -l)"

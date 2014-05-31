@@ -1,20 +1,5 @@
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2013 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
-#
-# This file is part of rbackupd.
-#
-# rbackupd is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# rbackupd is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 This module implements a cron scheduling flavor.
@@ -51,45 +36,64 @@ _name_mapping = ({},
 class Cronjob(object):
     """
     Represents a single cronjob schedule. It will not execute any code, but
-    will provice methods to poll information about that cronjob in relation to
-    a specific time, for example whether the cronjob elapsed between to
+    will provide methods to poll information about that cronjob in relation to
+    a specific time, for example whether the cronjob elapsed between two
     different times and so on.
     Look here (https://en.wikipedia.org/wiki/Cron#CRON_expression) for an
     deeper insight into the formatting of a cron expression. This class does
     not support all formatting options mentioned in this article, and the order
     of the fields differ.
 
-    Fields:
-    <minute> <hour> <day_of_month> <month> <year> [<weekday>]
+    Fields::
+
+    <minute>  <hour>  <day_of_month>  <month>  <year>  [<weekday>]
+
     Here are the possible values for all fields:
-    minute      : 0..59
-    hour        : 0..23
-    day_of_month: 1..31
-    month       : 1..12, JAN..DEC
-    year:       : 1900..3000
-    weekday     : 0..7 (1 = monday ... 7 = sunday, 0 = sunday), MON..SUN
+
+
+
+    ============  ======================================================
+    field         possible value
+    ============  ======================================================
+    minute        0..59
+    hour          0..23
+    day_of_month  1..31
+    month         1..12, JAN..DEC
+    year:         1900..3000
+    weekday       0..7 (1 = monday ... 7 = sunday, 0 = sunday), MON..SUN
+    ============  ======================================================
 
     The following matching expressions are supported:
-    - <integer> to match <integer>
-    - '<start>-<end>' to match the range from <start> (inclusive) to <end>
+
+    - `<integer>` to match `<integer>`
+    - `<start>-<end>` to match the range from `<start>` (inclusive) to `<end>`
       (inclusive).
-    - '*' to match all possible values for the given position.
-    - '/<step>' as the last specifier to only match all values of the be
+    - `*` to match all possible values for the given position.
+    - `/<step>` as the last specifier to only match all values of the be
       preceding range that can be reached by starting at the first matched
       value and going steps of size <step>.
-    - ',' to separate different expressions, the union of all given expressions
+    - `,` to separate different expressions, the union of all given expressions
       will be matched.
 
     Examples:
-    0 * * * * * matches the beginning of every hour.
-    3,*/5 1,4 * * * * matches the third and every fifth minute beginning at 0
-      of the first and forth hour everyday..
-    3-59/5 2,4 * * * * does the same as above, apart from maching the third and
-      every fifth minute starting at the second one instead of starting at 0.
+
+    ====================  ======================================================
+    pattern               meaning
+    ====================  ======================================================
+    `0 * * * * *`         matches the beginning of every hour.
+    `3,*/5 1,4 * * * *`   matches the third and every fifth minute beginning at
+                          0 of the first and forth hour everyday.
+    `3-59/5 2,4 * * * *`  does the same as above, apart from maching the third
+                          and every fifth minute starting at the second one
+                          instead of starting at 0.
+    ====================  ======================================================
 
 
-    IMPORTANT: <weekday> is not yet supported and can be omitted. For all
+    IMPORTANT: `<weekday>` is not yet supported and can be omitted. For all
     comparisons in this class, the weekday information is ignored.
+
+    :param schedule_string: The string to represent.
+    :type schedule_string: str
     """
     def __init__(self, schedule_string):
         self.cronstring = schedule_string
@@ -102,8 +106,10 @@ class Cronjob(object):
         matches the datetime. Only the year, month, day, hour and minute
         values of the datetime are used to determine a match, all other values
         are ignored.
+
         :param date_time: The datetime to check.
         :type date_time: datetime instance
+
         :returns: True if the datetime matches the cronjob, False otherwise.
         :rtype: bool
         """
@@ -120,19 +126,24 @@ class Cronjob(object):
         means that there was any match in this period. If date_time_1 and
         date_time_2 represent the same point in time, the behaviour is
         identical to matches(date_time_1).
+
         :param date_time_1: The datetime determining the start of the period.
         :type date_time_1: datetime instance
+
         :param date_time_2: The datetime determining the end of the period.
         :type date_time_2: datetime instance
+
         :param include_start: Determines whether the start should be included
-        into the search range.
+                              into the search range.
         :type include_start: bool
+
         :returns: True if the cronjob has occured between the two datetimes,
-        False otherwise.
+                  False otherwise.
         :rtype: bool
-        :raises: ValueError if date_time_1 is older than date_time_2
+
+        :raise ValueError: if date_time_2 is older than date_time_1
         """
-        if not date_time_1 <= date_time_2:
+        if date_time_2 < date_time_1:
             raise ValueError(
                 "date_time_1 has to be older than or equal to date_time_2.")
         min_val = self.get_min_time()
@@ -159,14 +170,19 @@ class Cronjob(object):
         Determines whether the cronjob has ever occured since date_time, what
         means that there was any match in this period. If date_time represents
         now, the bahaviour is identical to matches(date_time).
+
         :param date_time: The datetime in the past to check against.
         :type date_time: datetime instance
+
         :param include_start: Determines whether the start should be included
-        into the search range.
+                              into the search range.
         :type include_start: bool
+
         :returns: True if the cronjob has occured since date_time, False
-        otherwise.
-        :raises: ValueError if date_time is in the future.
+                  otherwise.
+        :rtype: bool
+
+        :raise ValueError: if date_time is in the future
         """
         return self.has_occured_between(date_time,
                                         datetime.datetime.now(),
@@ -175,16 +191,18 @@ class Cronjob(object):
     def get_max_time(self):
         """
         Determines the last possible datetime at which the cronjob occurs.
+
         :returns: The last possible datetime at which the cronjob occurs.
-        :rtype: datetime
+        :rtype: datetime instance
         """
         return _tuple_to_datetime([max(val) for val in self.schedule])
 
     def get_min_time(self):
         """
         Determines the first possible datetime at which the cronjob occurs.
+
         :returns: The first possible datetime at which the cronjob occurs.
-        :rtype: datetime
+        :rtype: datetime instance
         """
         return _tuple_to_datetime([min(val) for val in self.schedule])
 
@@ -192,14 +210,17 @@ class Cronjob(object):
         """
         Determines the most recent occurence of the cronjob relative to a
         specific datetime.
+
         :param d: The datetime relative to which to determine the most
-        recent occurence. If None is given, datetime.datetime.now() is used
-        instead.
+                  recent occurence. If None is given, datetime.datetime.now() is
+                  used instead.
         :type d: datetime instance
+
         :returns: The most recent occurence of the cronjob relative to d.
-        :rtype: datetime
-        :raises: ValueError if d is older than the first possible occurence
-        of the cronjob.
+        :rtype: datetime instance
+
+        :raise ValueError: if d is older than the first possible occurence
+                           of the cronjob
         """
         if not date_time:
             date_time = datetime.datetime.now()
@@ -281,11 +302,13 @@ def _parse_cronjob_string(cronjob_string):
     """
     Parses a cronjob string to a list of sets containing all possible values
     for a position.
+
     :param cronjob_string: The cronjob string to parse. For the format, see
     the Cronjob class.
-    :type cronjob_string: string
+    :type cronjob_string: str
+
     :returns: All possible values for every position.
-    :rtype: A list of sets.
+    :rtype: list of sets.
     """
     if not isinstance(cronjob_string, str):
         raise ValueError("Schedule string is not a string.")
@@ -302,8 +325,10 @@ def _parse_cronjob_string(cronjob_string):
 def _parse_string_to_fields(cron_string):
     """
     Converts a given string into a list of all fields found in this string.
+
     :param cron_string: The string to parse.
-    :type cron_string: string
+    :type cron_string: str
+
     :returns: A list containing all fields found in the string.
     :rtype: list of strings
     """
@@ -314,8 +339,10 @@ def _datetime_to_tuple(date_time):
     """
     Converts a datetime to a (minute, hour, day_of_month, month, year,
     weekday) tuple.
+
     :param d: The datetime object to convert.
     :type d: datetime instance
+
     :returns: A tuple derived from the datetime.
     :rtype: tuple
     """
@@ -331,8 +358,10 @@ def _tuple_to_datetime(date_time_tuple):
     """
     Converts a (minute, hour, day_of_month, month, year, weekday) tuple to
     the corresponding datetime.
+
     :param date_time_tuple: The tuple to convert.
     :type date_time_tuple: tuple
+
     :returns: A datetime derived from the tuple.
     :rtype: datetime
     """
@@ -347,12 +376,17 @@ def _parse_expression_at_index(expression, index):
     """
     Parses the expression at a specific index and returns a set containing all
     possible values for the field at the specified index.
+
     :param expression: The expression to parse.
-    :type expression: string
+    :type expression: str
+
     :param index: The index of the expression in a cronjob string.
+    :type index: int
+
     :returns: A set containing all possible values for the field at index.
     :rtype: set
-    :raises: ParseError if the expression is invalid.
+
+    :raise ParseError: if the expression is invalid
     """
     # We will just split the exception and parse every subexpression
     # individually. If an error occurs, we want the exception to contain the
@@ -373,7 +407,7 @@ def _parse_expression_at_index(expression, index):
 def _parse_subexpression_at_index(expression, index):
     """
     Helper function for _parse_expression_at_index(), same signature, but only
-    works onexpressions without ","
+    works on expressions without ",".
     """
     possible_values = None
     rest = expression.strip()
@@ -394,7 +428,7 @@ def _parse_subexpression_at_index(expression, index):
     rest = parts[0]
 
     # now, everything else might be "*", "x-y" or "z", let's look for a hyphen
-    # formatters
+    # formatter
     if '-' in rest:
         parts = rest.split('-')
         if len(parts) != 2:
@@ -405,8 +439,8 @@ def _parse_subexpression_at_index(expression, index):
         if not parts[1]:
             raise ParseError(expression,
                              "Missing end value for range formatter.")
-        start, end = (_get_integer_at_index(parts[0], index),
-                      _get_integer_at_index(parts[1], index))
+        start = _get_integer_at_index(parts[0], index)
+        end = _get_integer_at_index(parts[1], index)
         if start is None:
             raise ParseError(expression,
                              "Invalid start value for range formatter.")
@@ -416,12 +450,12 @@ def _parse_subexpression_at_index(expression, index):
         if start > end:
             raise ParseError(
                 expression,
-                "Start value must be lower or equal than end value.")
+                "Start value must be lower than or equal to end value.")
         possible_values = set(range(start, end + 1))
     elif '*' == rest:
         possible_values = set(_ranges[index])
     elif _get_integer_at_index(rest, index) is not None:
-        possible_values = {_get_integer_at_index(rest, index)}
+        possible_values = set([_get_integer_at_index(rest, index)])
     else:
         raise ParseError(expression, "Invalid expression")
 
@@ -439,10 +473,13 @@ def _get_integer_at_index(parse_string, index):
     """
     Returns the integer corresponding to a string at a specific index, or
     None if no appropriate value was found.
+
     :param parse_string: The string to parse.
-    :type parse_string: string
+    :type parse_string: str
+
     :param index: The index of the string in a field list.
     :type index: int
+
     :returns: The corresponding integer or None if no appropriate value was
     found.
     :rtype: int
@@ -458,7 +495,17 @@ class ParseError(Exception):
     """
     Exception that is raised when the parsing of a cronstring fails. Contains
     the expression that was parsed and a message explaining how it failed.
+
+    :param expression: The expression that could not be parsed
+    :type expression: str
+
+    :param message: A message with details about the error.
+    :type message: str
     """
     def __init__(self, expression, message):
         Exception.__init__(self, message)
+        self.message = message
         self.expression = expression
+
+    def __str__(self):
+        return self.message

@@ -32,3 +32,15 @@ v0.4 - *2013-12-10*
 + [CHANGED] The options for overlapping backups were dropped, backups are now always symlinked together.
 
 + [FIXED] Serious bug that might wrongly delete backups in december.
+
+v0.5 - *2014-05-31*
+-------------------
+
++ [NEW] Runnable with systemd.
++ [NEW] D-Bus interface to interact with the daemon.
+
++ [REMOVED] Automatically mounting devices is no longer supported.
+
++ [CHANGED] The structure of the configuration file changed.
+
++ [FIXED] Various little and serious bugs.
