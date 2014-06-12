@@ -6,9 +6,12 @@ The task module.
 """
 
 import datetime
+import enum
 import logging
+import multiprocessing
 import os
 import sys
+import time
 
 from rbackupd import backupstorage
 from rbackupd import constants as const
@@ -51,6 +54,12 @@ class Task(object):
         self.rsync_filter = rsync_filter
 
         self._backups = self._read_backups()
+
+        self._status = TaskStatus.stopped
+
+        self._pausing_event = multiprocessing.Event()
+        self._event_exit = multiprocessing.Event()
+        self._paused_event = multiprocessing.Event()
 
     def _is_latest_symlink(self, folder):
         return folder == const.SYMLINK_LATEST_NAME
@@ -264,7 +273,7 @@ class Task(object):
     def get_expired_backups(self, timestamp):
         """
         Returns all backups that are expired in the task.
-        :returns: All expired backups.
+
         :rtype: list of Backup instances
         """
         # we will sort the folders and just loop from oldest to newest until we
@@ -427,6 +436,135 @@ class Task(object):
                         backup.date > latest.date):
                     latest = backup
         return latest
+
+    @property
+    def status(self):
+        return self._status
+
+    def start(self):
+        """
+        Start the monitoring of the task in a new process.
+        """
+        logger.debug("Starting task \"%s\".", self.name)
+        self._process = multiprocessing.Process(target=self._monitor,
+                                                args=())
+        self._process.start()
+        self._status = TaskStatus.active
+
+    def stop(self, block=True):
+        """
+        Stops the monitoring of the task gracefully. You can restart the
+        monitoring with the :func:`start()` method.
+
+        :param block: Specifies that the method call should block until the task
+            is actually paused and has finished an already running operation. If
+            set to `False`, the task might still do work after the function
+            returns, but will not start another operation.
+
+            .. note:: If you plan on restarting the task, you must not set this
+                to `False` or you will get undefinied behaviour.
+        :type block: bool
+        """
+        logger.debug("Stopping task \"%s\".", self.name)
+        self._pause_monitoring(block=block)
+        self._kill_process()
+        self._status = TaskStatus.stopped
+
+    def abort(self):
+        """
+        Stops the monitoring of the task brutally, i.e. it just kills the
+        monitoring process.
+
+        .. warning:: This method might leave an invalid backup behind and should
+            be avoided.
+        """
+        logger.debug("Aborting task \"%s\".", self.name)
+        self._kill_process()
+        self._status = TaskStatus.stopped
+
+    def pause(self, block=True):
+        """
+        Pauses the monitoring of the task gracefully.
+
+        You can resume the monitoring with the :func:`resume()` method. Using
+        `resume()` after pausing with `block=False` is safe.
+
+        :param block: Specifies that the method call should block until the task
+            is actually paused and has finished an already running operation. If
+            set to `False`, the task might still do work after the function
+            returns, but will not start another operation.
+        :type block: bool
+        """
+        logger.debug("Pausing task \"%s\".", self.name)
+        self._pause_monitoring(block=block)
+        self._status = TaskStatus.paused
+
+    def resume(self):
+        """
+        Resumes the monitoring of the task if it was paused. If the task is
+        not paused, an error is raised.
+
+        :raise ValueError: if the task is not paused
+        """
+        logger.debug("Resuming task \"%s\".", self.name)
+        if not self.status == TaskStatus.paused:
+            raise ValueError("task is not paused, cannot be resumed")
+        self._resume_monitoring()
+        self._status = TaskStatus.active
+
+    def _kill_process(self):
+        self._process.terminate()
+        self._process.join()
+
+    def _pause_monitoring(self, block=True):
+        self._pausing_event.clear()
+        if block:
+            self._paused_event.wait()
+
+    def _resume_monitoring(self):
+        self._pausing_event.set()
+
+    def _monitor(self):
+        """
+        This is the method that runs in a separate task and checks for new and
+        expired backups whenever `event` is raised.
+
+        :param event: The event that triggers the monitoring.
+        :type event: multiprocessing.event instance
+        """
+
+        self._event_exit.clear()
+        self._pausing_event.set()
+
+        while True:
+            self._paused_event.set()
+            self._pausing_event.wait()
+            self._paused_event.clear()
+
+            self._status = TaskStatus.working
+            start = datetime.datetime.now()
+            logger.debug("checking task %s at %s", self.name, start)
+            self.create_backups_if_necessary(timestamp=start)
+            self.handle_expired_backups(timestamp=start)
+            self._status = TaskStatus.active
+
+            wait_seconds = 60 - datetime.datetime.now().second
+            logger.debug("Sleeping %s seconds.", wait_seconds)
+            while wait_seconds > 0:
+                if not self._pausing_event.is_set():
+                    self._paused_event.set()
+                    self._pausing_event.wait()
+                    self._paused_event.clear()
+                    break
+                time.sleep(1)
+                wait_seconds -= 1
+
+
+class TaskStatus(enum.Enum):
+    stopped = 1
+    active = 2
+    working = 3
+    paused = 4
 
 
 class IntervalInfo(object):

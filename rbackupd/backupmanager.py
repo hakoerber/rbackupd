@@ -908,13 +908,7 @@ class BackupManager(dbus.service.Object):
         minutely_event = multiprocessing.Event()
 
         for task in self.tasks:
-            process = multiprocessing.Process(target=self._start_monitor,
-                                              args=(task, minutely_event))
-            process.start()
-        minutely_process = multiprocessing.Process(
-            target=self._raise_event_minutely,
-            args=(minutely_event,))
-        minutely_process.start()
+            task.start()
 
         self._run_mainloop()
 
@@ -925,38 +919,3 @@ class BackupManager(dbus.service.Object):
         logger.debug("Starting the main loop")
         loop = gi.repository.GObject.MainLoop()
         loop.run()
-
-    def _start_monitor(self, task, on_event):
-        """
-        Periodically check a task for new or expired backups. Checks are
-        triggerred by an event. When started, a check will be started before
-        waiting for the event.
-
-        :param task: The task to monitor.
-        :type task: Task instance
-
-        :param on_event: The event that triggers a check of the task.
-        :type on_event: multiprocessing.Event instance
-        """
-        logger.debug("start a thread for task %s", task.name)
-        while True:
-            start = datetime.datetime.now()
-            logger.debug("checking task %s at %s", task.name, start)
-            task.create_backups_if_necessary(timestamp=start)
-            task.handle_expired_backups(timestamp=start)
-            on_event.wait()
-
-    def _raise_event_minutely(self, event):
-        """
-        Raise an event at the beginning of every minute.
-
-        :param event: The event to raise.
-        :type event: multiprocessing.Event instance
-        """
-        logger.debug("starting minutely event raiser process")
-        while True:
-            event.clear()
-            wait_seconds = 60 - datetime.datetime.now().second
-            logger.debug("Sleeping %s seconds until next cycle.", wait_seconds)
-            time.sleep(wait_seconds)
-            event.set()
