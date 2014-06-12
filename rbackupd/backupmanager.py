@@ -747,6 +747,63 @@ class BackupManager(dbus.service.Object):
         """
         self.configmapper.task(task).ssh_args = args
 
+    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
+    def GetTaskNames(self):
+        """
+        Return a list with the names of all tasks.
+
+        :rtype: str
+        """
+        return [task.name for task in self.tasks]
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskStatus(self, task):
+        """
+        Return the status of the specified task
+        """
+        return self._get_task_by_name(task).status.name
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def PauseTask(self, task):
+        """
+        Pause the spcified task.
+
+        :param task: the name of the task to pause
+        :type task: str
+        """
+        self._get_task_by_name(task).pause(block=True)
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def ResumeTask(self, task):
+        """
+        Resume the spcified task.
+
+        :param task: the name of the task to resume
+        :type task: str
+        """
+        self._get_task_by_name(task).resume()
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def StopTask(self, task):
+        """
+        Stop the spcified task.
+
+        :param task: the name of the task to stop
+        :type task: str
+        """
+        self._get_task_by_name(task).stop()
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
+    def StartTask(self, task):
+        """
+        Start the spcified task.
+
+        :param task: the name of the task to start
+        :type task: str
+        """
+        self._get_task_by_name(task).start()
+
     def _load_tasks(self, reload=False):
         """
         Parses the tasks section of the configuration file and creates
@@ -765,6 +822,12 @@ class BackupManager(dbus.service.Object):
         self.tasks = []
         for task_name in self.configmapper.task_names:
             self.tasks.append(self._get_task(task_name))
+
+    def _get_task_by_name(self, name):
+        for task in self.tasks:
+            if task.name == name:
+                return task
+        raise ValueError("task not found")
 
     def _get_task(self, name):
         """
