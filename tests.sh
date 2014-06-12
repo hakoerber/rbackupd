@@ -20,8 +20,17 @@ test_pep8() {
         --exclude=.ropeproject
 }
 
-test_tox && { echo "tox: OK" ; } || { echo "tox: FAILED" ; failed=1 ; }
-test_pep8 && { echo "pep8: OK" ; } || { echo "pep8: FAILED" ; failed=1 ; }
+if [[ "$1" == "tox" ]] || [[ -z "$1" ]] ; then
+    test_tox && { echo "tox: OK" ; } || { echo "tox: FAILED" ; failed=1 ; }
+fi
+
+if [[ "$1" == "pep8" ]] || [[ -z "$1" ]] ; then
+    test_pep8 && { echo "pep8: OK" ; } || { echo "pep8: FAILED" ; failed=1 ; }
+fi
+
+if [[ "$1" == "pytest" ]] ; then
+    py.test "$(dirname $0)/test/" --strict ; failed=$?
+fi
 
 [[ $failed == 0 ]] && echo "All tests passed." || echo "Tests failed."
 
