@@ -1,16 +1,23 @@
-Welcome to rbackupd's documentation!
-************************************
+.. include:: global.rst
 
-The rbackupd backup daemon.
+Welcome
+*******
+
+The |appname| backup daemon.
 
 Contents:
 ---------
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
+    :numbered:
 
+    intro
+    setup
+    config
+    devinfo
     packages
-
+    changes
 
 Indices and tables
 ******************

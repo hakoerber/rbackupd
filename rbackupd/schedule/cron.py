@@ -66,27 +66,27 @@ class Cronjob(object):
     The following matching expressions are supported:
 
     - `<integer>` to match `<integer>`
-    - `<start>-<end>` to match the range from `<start>` (inclusive) to `<end>`
-      (inclusive).
+    - `<start>-<end>` to match the range from `<start>` (inclusive) to `<end>`\
+        (inclusive).
     - `*` to match all possible values for the given position.
-    - `/<step>` as the last specifier to only match all values of the be
-      preceding range that can be reached by starting at the first matched
-      value and going steps of size <step>.
-    - `,` to separate different expressions, the union of all given expressions
-      will be matched.
+    - `/<step>` as the last specifier to only match all values of the be\
+        preceding range that can be reached by starting at the first matched\
+        value and going steps of size <step>.
+    - `,` to separate different expressions, the union of all given\
+        expressions will be matched.
 
     Examples:
 
-    ====================  ======================================================
-    pattern               meaning
-    ====================  ======================================================
-    `0 * * * * *`         matches the beginning of every hour.
-    `3,*/5 1,4 * * * *`   matches the third and every fifth minute beginning at
-                          0 of the first and forth hour everyday.
-    `3-59/5 2,4 * * * *`  does the same as above, apart from maching the third
-                          and every fifth minute starting at the second one
-                          instead of starting at 0.
-    ====================  ======================================================
+    ======================  ====================================================
+    pattern                 meaning
+    ======================  ====================================================
+    ``0      *   * * * *``  matches the beginning of every hour.
+    ``3,*/5  1,4 * * * *``  matches the third and every fifth minute beginning
+                            at 0 of the first and forth hour everyday.
+    ``3-59/5 2,4 * * * *``  does the same as above, apart from maching the third
+                            and every fifth minute starting at the second one
+                            instead of starting at 0.
+    ======================  ====================================================
 
 
     IMPORTANT: `<weekday>` is not yet supported and can be omitted. For all

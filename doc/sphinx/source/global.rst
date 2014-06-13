@@ -1,0 +1,3 @@
+:orphan:
+
+.. |appname| replace:: rbackupd
