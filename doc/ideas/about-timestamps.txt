@@ -1,5 +1,5 @@
 Timestamps should represent the time the backup was started, it is therefore
 a guarantee that all changes made BEFORE that time are incorporated in the
 backup. When backups are links to other backups (either recursive hardlinks or
-simply symlinks) their timestamp should be indentical to the backup they link
+simply symlinks) their timestamp should be identical to the backup they link
 to.

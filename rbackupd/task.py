@@ -158,7 +158,7 @@ class Task(object):
             if interval_info.cronjob.has_occured_since(latest_backup.date,
                                                        include_start=False):
                 logger.debug("Task \"%s\": Backup necessary as interval "
-                             "occured since latest backup.",
+                             "occurred since latest backup.",
                              self.name)
                 necessary_backups.append(interval_info)
         return necessary_backups

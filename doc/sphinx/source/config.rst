@@ -118,6 +118,10 @@ List of all keys
 logging section
 +++++++++++++++
 
+This section contains information about the logging |appname| should do. This
+might be useful when one wants to know when backups occurred, the reason for
+failed backups and to trace back unexpected behaviour.
+
 logfile
 ~~~~~~~
 
@@ -155,7 +159,7 @@ tasks section
 rsync_logfile
 ~~~~~~~~~~~~~
 
-A boolean specifiying whether an rsync logfile should be created.
+A boolean specifying whether an rsync logfile should be created.
 
 rsync_logfile_name
 ~~~~~~~~~~~~~~~~~~
@@ -225,7 +229,7 @@ tasks
 +++++
 
 You can specify all options from the **task section** here to override them. In
-addtion, the following option have to be specified:
+addition, the following option have to be specified:
 
 .. _sources:
 
@@ -246,7 +250,7 @@ The path to the destination of the backup. The same limitations as in
 interval subsection
 ~~~~~~~~~~~~~~~~~~~
 
-This section is used to specify an arbitary number of intervals in which backups
+This section is used to specify an arbitrary number of intervals in which backups
 will be created. Every interval is represented by a key-value-pair. The name of
 the key is the name of the interval, and the value is a string of a specific
 format describing the interval. You can specify as many intervals as you want.
@@ -345,7 +349,7 @@ Examples:
 | ``3,*/5  1,4 * * * *`` | matches the third and every fifth minute beginning  |
 |                        | at 0 of the first and forth hour everyday.          |
 +------------------------+-----------------------------------------------------+
-| ``3-59/5 2,4 * * * *`` | does the same as above, apart from maching the      |
+| ``3-59/5 2,4 * * * *`` | does the same as above, apart from matching the     |
 |                        | third and every fifth minute starting at the second |
 |                        | one instead of starting at 0.                       |
 +------------------------+-----------------------------------------------------+

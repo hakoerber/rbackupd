@@ -20,7 +20,7 @@ _ranges = (range(60), range(24), range(1, 32), range(1, 13),
 _check_range = range(0, 5)
 
 
-# mapping strings to interger for every field, so you can for example use
+# mapping strings to integer for every field, so you can for example use
 # JUN-OCT instead of 6-10 in the "month" field
 _name_mapping = ({},
                  {},
@@ -83,9 +83,9 @@ class Cronjob(object):
     ``0      *   * * * *``  matches the beginning of every hour.
     ``3,*/5  1,4 * * * *``  matches the third and every fifth minute beginning
                             at 0 of the first and forth hour everyday.
-    ``3-59/5 2,4 * * * *``  does the same as above, apart from maching the third
-                            and every fifth minute starting at the second one
-                            instead of starting at 0.
+    ``3-59/5 2,4 * * * *``  does the same as above, apart from matching the
+                            third and every fifth minute starting at the second
+                            one instead of starting at 0.
     ======================  ====================================================
 
 
@@ -102,7 +102,7 @@ class Cronjob(object):
     def matches(self, date_time):
         """
         Determines whether a given datetime has a match in the cronjob, that
-        means that there is a cronjob occurence now or in the past that
+        means that there is a cronjob occurrence now or in the past that
         matches the datetime. Only the year, month, day, hour and minute
         values of the datetime are used to determine a match, all other values
         are ignored.
@@ -122,7 +122,7 @@ class Cronjob(object):
     def has_occured_between(self, date_time_1, date_time_2,
                             include_start=True):
         """
-        Determines whether the cronjob has occured between two datetimes, what
+        Determines whether the cronjob has occurred between two datetimes, what
         means that there was any match in this period. If date_time_1 and
         date_time_2 represent the same point in time, the behaviour is
         identical to matches(date_time_1).
@@ -137,7 +137,7 @@ class Cronjob(object):
                               into the search range.
         :type include_start: bool
 
-        :returns: True if the cronjob has occured between the two datetimes,
+        :returns: True if the cronjob has occurred between the two datetimes,
                   False otherwise.
         :rtype: bool
 
@@ -167,7 +167,7 @@ class Cronjob(object):
 
     def has_occured_since(self, date_time, include_start=True):
         """
-        Determines whether the cronjob has ever occured since date_time, what
+        Determines whether the cronjob has ever occurred since date_time, what
         means that there was any match in this period. If date_time represents
         now, the bahaviour is identical to matches(date_time).
 
@@ -178,7 +178,7 @@ class Cronjob(object):
                               into the search range.
         :type include_start: bool
 
-        :returns: True if the cronjob has occured since date_time, False
+        :returns: True if the cronjob has occurred since date_time, False
                   otherwise.
         :rtype: bool
 
@@ -208,18 +208,18 @@ class Cronjob(object):
 
     def get_most_recent_occurence(self, date_time=None):
         """
-        Determines the most recent occurence of the cronjob relative to a
+        Determines the most recent occurrence of the cronjob relative to a
         specific datetime.
 
         :param d: The datetime relative to which to determine the most
-                  recent occurence. If None is given, datetime.datetime.now() is
-                  used instead.
+                  recent occurrence. If None is given, datetime.datetime.now()
+                  is used instead.
         :type d: datetime instance
 
-        :returns: The most recent occurence of the cronjob relative to d.
+        :returns: The most recent occurrence of the cronjob relative to d.
         :rtype: datetime instance
 
-        :raise ValueError: if d is older than the first possible occurence
+        :raise ValueError: if d is older than the first possible occurrence
                            of the cronjob
         """
         if not date_time:
@@ -286,7 +286,7 @@ def _set_lower_value(schedule, latest_schedule, i):
                          "this crontab")
     # not using indices, as that would rely on self.schedule to
     # be sorted
-    # lets revert to the last postion
+    # lets revert to the last position
     i += 1
     # lower it to the next possible value and continue
     last_value = latest_schedule[i]

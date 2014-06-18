@@ -6,7 +6,7 @@ rbackupd - Backup Daemon creating snapshot-like backups
 
 .SH DESCRIPTION
 .B rbackupd
-acts as a backup daemon that creates snapshot of arbitary directories using
+acts as a backup daemon that creates snapshot of arbitrary directories using
 .B rsync(1).
 It is mainly controlled by a configuration file (see
 .B rbackupd.conf(5)

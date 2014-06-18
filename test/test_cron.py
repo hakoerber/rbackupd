@@ -16,12 +16,12 @@ class Tests(unittest.TestCase):
 
         self.now = datetime.datetime.now()
 
-        # higest possible value
+        # highest possible value
         self.d_in_hi = datetime.datetime(2015, 11,  5, 15,  1)
         # lowest possible value
         self.d_in_lo = datetime.datetime(2012,  6,  5, 10,  1)
 
-        # datetimes maching an occurence exactly
+        # datetimes matching an occurrence exactly
         self.d_in_exact = [self.d_in_hi, self.d_in_lo,
                            datetime.datetime(2013, 8, 5, 13, 1)]
 

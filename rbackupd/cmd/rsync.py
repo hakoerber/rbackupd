@@ -30,7 +30,7 @@ def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
     :param destination: The path to the destination of the transfer.
     :type destination: str
 
-    :param link_ref: The path used for the --link-dest paramter of rsync. All
+    :param link_ref: The path used for the --link-dest parameter of rsync. All
                      files found there will not be copied from source, but
                      hardlinked into destination.
     :type link_ref: str

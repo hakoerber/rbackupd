@@ -9,7 +9,7 @@ changed since the last snapshot are hardlinked into the new snapshot.
 You can specify multiple intervals in which snapshots will be created, and a
 maximum number of backups that should be kept for every interval. Intervals
 can be given in a cron-like format, which means you have great flexibility in
-specifiying these intervals.
+specifying these intervals.
 
 Thanks to rsync, rbackupd will preserve hardlinks, special files such as named
 sockets and fifos, device files, permissions, ownership, modification times,

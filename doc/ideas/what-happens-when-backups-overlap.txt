@@ -11,7 +11,7 @@ in the specific [task] sections. Possible values are "hardlink", "single" and
 
 - "single" means that only one backup will be made. The priority is determined
   by the order of the "interval" keys in the specific task sections. The
-  higest scheduled interval will take precedence. In the case above, when
+  highest scheduled interval will take precedence. In the case above, when
   the daily interval is set before the hourly interval in the configuration
   file, only a daily backup will be created. Note however that the hourly
   backup will be made in the next polling.
