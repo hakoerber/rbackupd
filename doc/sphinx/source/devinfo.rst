@@ -140,7 +140,7 @@ Dependencies
 
 - `python <http://python.org>`_ >= v3
 - `rsync <http://rsync.samba.org>`_ >= v2.5.7
-- `ConfigObj <https://pypi.python.org/pypi/configobj>`_ >=5.0.5
+- `ConfigObj <http://pypi.python.org/pypi/configobj>`_ >=5.0.5
 - PyGObject for python 3
 - dbus-python for python 3
 
@@ -149,4 +149,5 @@ Development dependencies
 
 - `git <http://git-scm.com>`_
 - `pytest <http://pytest.org>`_ >= v2.5.2
-- `tox <https://pypi.python.org/pypi/tox>`_ >= v1.7.1
+- `tox <http://pypi.python.org/pypi/tox>`_ >= v1.7.1
+- `sphinx <http://pypi.python.org/pypi/Sphinx>`_ >= v1.2.2

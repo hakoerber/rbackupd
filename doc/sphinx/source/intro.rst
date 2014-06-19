@@ -12,7 +12,7 @@ the last snapshot are hardlinked into the new snapshot.
 You can specify multiple intervals in which snapshots will be created, and a
 maximum number of snapshots that should be kept for every interval. Intervals
 can be given in a
-`cron <https://en.wikipedia.org/wiki/Cron#CRON_expression>`_-like format,
+`cron <http://en.wikipedia.org/wiki/Cron#CRON_expression>`_-like format,
 which means you have great flexibility in specifying these intervals.
 
 Thanks to rsync, |appname| will preserve hardlinks, special files such as named
