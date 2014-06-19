@@ -4,8 +4,8 @@ Introduction
 ============
 
 |appname| is a backup program for linux using
-`rsync <http://rsync.samba.org/>`_ It creates "snapshots" of the filesystem that
-contain all files and directories of that filesystem at the time of the
+`rsync <http://rsync.samba.org/>`_. It creates "snapshots" of the filesystem
+that contain all files and directories of that filesystem at the time of the
 snapshot. To reduce the required disk space, files that have not changed since
 the last snapshot are hardlinked into the new snapshot.
 
@@ -22,7 +22,7 @@ ACLs and extended attributes.
 As the snapshots are neither compressed nor encrypted by |appname|, every user
 can access all files owned by him without requiring root privileges.
 
-|appname| is written in python, for version 3.3.
+|appname| is written in python, for version 3.
 
 Requirements
 ------------
@@ -43,6 +43,19 @@ Usage
 Type ``rbackupd --help`` to get a list of all available commands. Also look
 :ref:`here <running>` for help with an initial setup and :ref:`here <config>`
 for help with the configuration file.
+
+Issue Tracker
+-------------
+
+|appname| uses the `Issue Tracker on GitHub <http://github.com/whatevsz/
+rbackupd/issues>`_. Look also :ref:`here <issues>`. Don't hesitate to file bugs
+or add feature requests!
+
+Contributing
+------------
+
+Look :ref:`here <contributing>` for a guide about how to contribute to
+|appname|.
 
 Changelog
 ---------

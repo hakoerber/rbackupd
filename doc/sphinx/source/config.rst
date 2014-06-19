@@ -5,8 +5,17 @@
 The configuration file
 **********************
 
+The configuration file (by default located at ``/etc/rbackupd/rbackupd.conf``)
+contains everything |appname| needs in order to know what to do.
+
 :download:`Here <../../../conf/rbackupd.conf>` you can take a look into the
-default configuration file that will be installed with |appname|.
+default configuration file that will be installed with |appname|. Most keys have
+sensible default values, but you should take a closer look into the ``main``
+task section to specify when backups are created and deleted, where the backup
+should be stored, and what to back up in the first place.
+
+All keys you encounter in the file have a brief description with them, a more
+thorough one can be found in the :ref:`key-list` section for each key.
 
 General format
 --------------
@@ -34,19 +43,6 @@ like this::
 
 Note that trailing or preceding whitespace will be stripped, if you want to
 conserve it you have to quote the value, see :ref:`quoting` for more detail.
-
-Data types
-++++++++++
-
-Generally, every value will simply be parsed as a string or list of strings.
-Where it is explicitly stated that a boolean is expected, the following values
-are accepted:
-
-+-------------------+-------------------+
-| true              | false             |
-+===================+===================+
-| true, yes, on, 1  | false, no, off, 0 |
-+-------------------+-------------------+
 
 .. _lists:
 
@@ -91,12 +87,25 @@ Note that you do *not* have to quote whitespace in the middle of a token, so ::
 
 if perfectly fine.
 
+If a string contains a line break, it has to be surrounded with triple quotes
+(``'''``) which looks like this::
+
+    key = '''this
+             contains
+             linebreaks'''
+
+This would be parsed as ::
+
+    "this\n             contains\n             linebreaks"
+
 Sections
 ++++++++
 
 The configuration file is separated into sections and subsections. A section
 header is surrounded by square brackets, while the number of brackets
-corresponds to the nesting level of the section. It is fairly obvious::
+corresponds to the nesting level of the section. It is fairly obvious:
+
+.. code-block:: cfg
 
     [section]
     # ...
@@ -112,6 +121,21 @@ corresponds to the nesting level of the section. It is fairly obvious::
 Note that the indentation is not significant, but makes reading the file much
 more pleasureable.
 
+Data types
+++++++++++
+
+Generally, every value will simply be parsed as a string or list of strings.
+Where it is explicitly stated that a **boolean** is expected, the following
+values are accepted:
+
++-------------------+-------------------+
+| true              | false             |
++===================+===================+
+| true, yes, on, 1  | false, no, off, 0 |
++-------------------+-------------------+
+
+.. _key-list:
+
 List of all keys
 ----------------
 
@@ -125,7 +149,16 @@ failed backups and to trace back unexpected behaviour.
 logfile
 ~~~~~~~
 
-The path to the logfile. If it does not exist already, it will be created.
+The path to the logfile. If it does not exist already, it will be created. The
+directory containing the file will be created, too, but higher ones will not.
+This means that with the default value
+
+.. code-block:: cfg
+
+    logfile = /var/log/rbackupd/log
+
+the ``rbackupd/`` subfolder will be created, whereas neither ``/var/`` nor
+``/var/log/`` will.
 
 loglevel
 ~~~~~~~~
@@ -144,22 +177,32 @@ The loglevel for the logfile. Available options are:
 | debug   | a whole lot of information will be logged |
 +---------+-------------------------------------------+
 
+Note that setting this to ``debug`` fills the logfile with a lot of information
+that is only relevant for tracing bugs and unexpected behaviour and expands the
+size of the logfile significantly.
+
 rsync section
 +++++++++++++
+
+This section contains information related to the ``rsync``.
 
 cmd
 ~~~
 
-The absolute path to the rsync exectuable. If this key is missing, the
-executable will be searched in $PATH
+The absolute path to the rsync exectuable. If this key is missing,
+``/usr/bin/rsync`` will be used as default.
 
 tasks section
 +++++++++++++
 
+This section contains the default values applying to all tasks, and the tasks
+themselves as subsections. If a default key is also present in a task
+subsection, the latter takes precedence and overwrites the default.
+
 rsync_logfile
 ~~~~~~~~~~~~~
 
-A boolean specifying whether an rsync logfile should be created.
+A **boolean** specifying whether an rsync logfile should be created.
 
 rsync_logfile_name
 ~~~~~~~~~~~~~~~~~~
@@ -178,10 +221,10 @@ parameters.
 filters, includes, excludes, include_files, exclude_files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-These are filters applied to the file list by *rsync*. You can specify as many
+These are filters applied to the file list by ``rsync``. You can specify as many
 filters as you want per option as a :ref:`list <lists>`. Regardless of their
 order in the configuration file, the options will always be ordered in like this
-when passed to *rsync*:
+when passed to rsync:
 
 - filters
 - includes
@@ -190,7 +233,7 @@ when passed to *rsync*:
 - exclude_files
 
 The \*_files options are not patterns, but paths to files with contain patterns.
-Note that these paths have to be absolute paths.
+Note that these paths have to be absolute.
 
 See the ``FILTER RULES`` section in :manpage:`rsync(1)` for more information
 about the patterns.
@@ -198,31 +241,54 @@ about the patterns.
 create_destination
 ~~~~~~~~~~~~~~~~~~
 
-This boolean specifies whether the destination directory should be created if it
-does not exist already. This might be useful when the backup destination is
-located on a removable device. When setting this option to *false* one could
+This **boolean** specifies whether the destination directory should be created
+if it does not exist already. This might be useful when the backup destination
+is located on a removable device. When setting this option to *false* one could
 prevent creating a backup on the mountpoint of this device if it is not mounted.
+
+Note that no higher directories will be created, that means when you specify
+
+.. code-block:: cfg
+
+    destination = /mount/backup
+
+the ``backup/`` subfolder will be created if it does not exist, whereas
+``/mount`` will not.
 
 one_fs
 ~~~~~~
 
-This boolean specifies whether *rsync* should cross filesystem boundaries on the
-source when creating a backup. Compare the ``-x``/``--one-file-system`` option
-in :manpage:`rsync(1)`. Note that rsync treats "bind"-mount to the same device
-as being on the same filesystem.
+This **boolean** specifies whether ``rsync`` should cross filesystem boundaries
+on the source when creating a backup. Compare the ``-x``/``--one-file-system``
+option in :manpage:`rsync(1)`. Note that rsync treats "bind"-mount to the same
+device as being on the same filesystem.
+
+Note that you can of course still specify mount point in ``sources`` with this
+set to ``true``, it only tells ``rsync`` not to descend into mountpoints when
+recursing.
 
 rsync_args
 ~~~~~~~~~~
 
-This is a string that will be passed directly to *rsync*, so you can use every
+This is a string that will be passed directly to ``rsync``, so you can use every
 option available. These options will be put at the end of the whole rsync
 command, after all other options that are results from options in the
 configuration file (filters etc.).
 
+.. warning::
+
+    You should not alter the default value unless you know what you are doing,
+    otherwise the creation of backups might fail.
+
+.. note::
+
+    Multiple whitespace will be condensed into a single space, so multiple lines
+    can be indented nicely.
+
 ssh_args
 ~~~~~~~~
 
-This is a string with options that are passed to *ssh* when starting a remote
+This is a string with options that are passed to ``ssh`` when starting a remote
 connection.
 
 tasks
@@ -250,12 +316,12 @@ The path to the destination of the backup. The same limitations as in
 interval subsection
 ~~~~~~~~~~~~~~~~~~~
 
-This section is used to specify an arbitrary number of intervals in which backups
-will be created. Every interval is represented by a key-value-pair. The name of
-the key is the name of the interval, and the value is a string of a specific
-format describing the interval. You can specify as many intervals as you want.
-The intervals are specified in a format similar to the cron scheduling program,
-look into :ref:`this section <cron-format>` for a description.
+This section is used to specify an arbitrary number of intervals in which
+backups will be created. Every interval is represented by a key-value-pair. The
+name of the key is the name of the interval, and the value is a string of a
+specific format describing the interval. You can specify as many intervals as
+you want. The intervals are specified in a format similar to the cron scheduling
+program, look into :ref:`this section <cron-format>` for a description.
 
 .. _keep-subsection:
 
@@ -308,10 +374,13 @@ The following matching expressions are supported for each *field*:
 
 
 - ``<integer>`` to match ``<integer>``
-- ``<start>-<end>`` to match the range from ``<start>`` (inclusive) to ``<end>`` (inclusive).
+- ``<start>-<end>`` to match the range from ``<start>`` (inclusive) to ``<end>``
+  (inclusive).
 - ``*`` to match all possible values for the given position.
-- ``/<step>`` as the last specifier to only match all values of the be preceding range that can be reached by starting at the first matched value and going steps of size <step>.
-- ``,`` to separate different expressions, the union of all given expressions will be matched.
+- ``/<step>`` as the last specifier to only match all values of the be preceding
+  range that can be reached by starting at the first matched value and going steps of size <step>.
+- ``,`` to separate different expressions, the union of all given expressions
+  will be matched.
 
 The minimum and maximum values for each field are as follows:
 
@@ -329,14 +398,15 @@ The minimum and maximum values for each field are as follows:
 +-------------------+---------+---------+----------------------------+
 | month             | 1       | 12      |                            |
 +-------------------+---------+---------+----------------------------+
-| year:             | 1900    | 3000    |                            |
+| year              | 1900    | 3000    |                            |
 +-------------------+---------+---------+----------------------------+
 | weekday           | 0       | 7       | 1 = monday, 0 = 7 = sunday |
 +-------------------+---------+---------+----------------------------+
 
 For ``month`` and ``weekday``, there are handy abbreviations:
 
-- ``month``: ``JAN``, ``FEB``, ``MAR``, ``APR``, ``MAY``, ``JUN``, ``JUL``, ``AUG``, ``SEP``, ``OCT``, ``NOV``, ``DEC``
+- ``month``: ``JAN``, ``FEB``, ``MAR``, ``APR``, ``MAY``, ``JUN``, ``JUL``,
+  ``AUG``, ``SEP``, ``OCT``, ``NOV``, ``DEC``
 - ``weekday``: ``MON``, ``TUE``, ``WED``, ``THU``, ``FRI``, ``SAT``, ``SUN``
 
 Examples:
@@ -362,10 +432,10 @@ Age format
 The format to specify an age is very simple, it is just an integer with a
 "multiplier" char at the end. The available multipliers are:
 
-- ``m`` for minute
-- ``h`` for hour
-- ``d`` for day
-- ``w`` for week
-- ``M`` for month
+- ``m`` for minutes
+- ``h`` for hours
+- ``d`` for days
+- ``w`` for weeks
+- ``M`` for months
 
 You cannot combine the multipliers with each other.
