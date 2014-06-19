@@ -70,7 +70,7 @@ switch like this
 
 You require root privileges for the program to work.
 
-There is also a `systemd <http://www.freedesktop.org/wiki/Software/systemd/>`_
+There is also a `systemd <http://www.freedesktop.org/wiki/Software/systemd>`_
 service file shipped with the program. If you want to run |appname| as a
 systemd service, you can do so by executing
 

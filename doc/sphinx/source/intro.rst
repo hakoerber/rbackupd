@@ -4,7 +4,7 @@ Introduction
 ============
 
 |appname| is a backup program for linux using
-`rsync <http://rsync.samba.org/>`_. It creates "snapshots" of the filesystem
+`rsync <http://rsync.samba.org>`_. It creates "snapshots" of the filesystem
 that contain all files and directories of that filesystem at the time of the
 snapshot. To reduce the required disk space, files that have not changed since
 the last snapshot are hardlinked into the new snapshot.
@@ -29,7 +29,7 @@ Requirements
 
 - a POSIX compatible operating system
 - **rsync** v2.5.7 or later
-- **python** v3.3 or later
+- **python**  3
 - a filesystem supporting hardlinks
 
 Installation

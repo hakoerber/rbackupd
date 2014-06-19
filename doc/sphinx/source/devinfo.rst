@@ -14,7 +14,7 @@ Install *git*
 +++++++++++++
 
 Install ``git`` from your distribution's repositories or from `the website
-<http://git-scm.com/>`_. If you are unfamiliar with ``git``, `this book
+<http://git-scm.com>`_. If you are unfamiliar with ``git``, `this book
 <http://git-scm.com/book>`_ is a great resource and reference.
 
 Fork on GitHub
@@ -131,3 +131,22 @@ All unittests can be found in the `test/` subdirectory of the prject root.
 Tox is configured so that it will run py.test to run all tests in the test
 directory against python version 3.4 and test if the sphinx documentation can be
 built.
+
+Packaging
+---------
+
+Dependencies
+++++++++++++
+
+- `python <http://python.org>`_ >= v3
+- `rsync <http://rsync.samba.org>`_ >= v2.5.7
+- `ConfigObj <https://pypi.python.org/pypi/configobj>`_ >=5.0.5
+- PyGObject for python 3
+- dbus-python for python 3
+
+Development dependencies
+++++++++++++++++++++++++
+
+- `git <http://git-scm.com>`_
+- `pytest <http://pytest.org>`_ >= v2.5.2
+- `tox <https://pypi.python.org/pypi/tox>`_ >= v1.7.1
