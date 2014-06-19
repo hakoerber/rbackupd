@@ -158,7 +158,8 @@ This means that with the default value
     logfile = /var/log/rbackupd/log
 
 the ``rbackupd/`` subfolder will be created, whereas neither ``/var/`` nor
-``/var/log/`` will.
+``/var/log/`` will. Note that environment variables and the tilde character
+(``~``) will be expanded.
 
 loglevel
 ~~~~~~~~
@@ -303,7 +304,8 @@ sources
 ~~~~~~~
 
 A comma separated list of paths with sources of the backup. These have to be
-absolute paths, and environment variables will not be expanded.
+absolute paths. Environment variables and the tilde (``~``) character will be
+expanded.
 
 destination
 ~~~~~~~~~~~
