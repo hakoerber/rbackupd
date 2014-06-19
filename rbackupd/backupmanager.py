@@ -823,6 +823,12 @@ class BackupManager(dbus.service.Object):
         for task_name in self.configmapper.task_names:
             self.tasks.append(self._get_task(task_name))
 
+    def _expand_env_vars(self, path):
+        return os.path.expanduser(os.path.expandvars(path))
+
+    def _expand_env_vars_in_list(self, paths):
+        return [self._expand_env_vars(path) for path in paths]
+
     def _get_task_by_name(self, name):
         for task in self.tasks:
             if task.name == name:
@@ -849,9 +855,11 @@ class BackupManager(dbus.service.Object):
 
         filter_patterns = task_section.filter_patterns
         include_patterns = task_section.include_patterns
-        include_files = task_section.include_files
         exclude_patterns = task_section.exclude_patterns
-        exclude_files = task_section.exclude_files
+        include_files = self._expand_env_vars_in_list(
+            task_section.include_files)
+        exclude_files = self._expand_env_vars_in_list(
+            task_section.exclude_files)
 
         create_destination = task_section.create_destination
         one_filesystem = task_section.one_filesystem
@@ -859,8 +867,8 @@ class BackupManager(dbus.service.Object):
         ssh_args = task_section.ssh_args
 
         # these values are unique for every task_section
-        destination = task_section.destination
-        sources = task_section.sources
+        destination = self._expand_env_vars(task_section.destination)
+        sources = self._expand_env_vars_in_list(task_section.sources)
 
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:

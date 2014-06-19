@@ -32,7 +32,7 @@ class ConfigManager(configobj.ConfigObj):
             list_values=True,
             create_empty=False,
             file_error=True,
-            interpolation="template",
+            interpolation=False,
             raise_errors=True,
             configspec=configspec,
             write_empty_values=True)
