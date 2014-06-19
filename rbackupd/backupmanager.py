@@ -949,12 +949,22 @@ class BackupManager(dbus.service.Object):
             rsync_logfile_options=rsync_logfile_options,
             rsync_filter=rsync_filter)
 
+    def _validate_values(self):
+        rsync_cmd = self.configmapper.rsync_command
+        if not os.path.isabs(rsync_cmd):
+            logger.critical("The rsync command must be an absolute path.")
+            sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
+        if not os.path.isfile(rsync_cmd) and os.access(rsync_cmd, os.X_OK):
+            logger.critical("\"%s\" is no a valid executable")
+            sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
+
     def start(self):
         """
         Start the backup manager. This means reading and parsing the
         configuration file and starting the monitoring of the backups.
         """
         self.configmapper.read_config(reload=False)
+        self._validate_values()
         self._load_tasks(reload=False)
 
         logfile_dir = os.path.dirname(self.configmapper.logfile_path)
