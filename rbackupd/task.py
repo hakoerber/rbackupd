@@ -33,7 +33,6 @@ class Task(object):
                  sources,
                  destination,
                  scheduling_info,
-                 create_destination,
                  one_filesystem,
                  ssh_args,
                  rsync_cmd,
@@ -44,7 +43,6 @@ class Task(object):
         self.sources = sources
         self.destination = destination
         self.scheduling_info = scheduling_info
-        self.create_destination = create_destination
         self.one_filesystem = one_filesystem
         self.ssh_args = ssh_args
 

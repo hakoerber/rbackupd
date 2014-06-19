@@ -941,7 +941,6 @@ class BackupManager(dbus.service.Object):
             sources=sources,
             destination=destination,
             scheduling_info=task_scheduling_info,
-            create_destination=create_destination,
             one_filesystem=one_filesystem,
             ssh_args=ssh_args,
             rsync_cmd=self.configmapper.rsync_command,
