@@ -5,11 +5,9 @@
 The backupmanager module.
 """
 
-import datetime
 import logging
 import os
 import sys
-import time
 import dbus.service
 import dbus.mainloop.glib
 import gi.repository.GObject
@@ -25,6 +23,14 @@ from rbackupd.schedule import interval
 logger = logging.getLogger(__name__)
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+
+def expand_env_vars(path):
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+def expand_env_vars_in_list(paths):
+    return [expand_env_vars(path) for path in paths]
 
 
 class BackupManager(dbus.service.Object):
@@ -177,7 +183,7 @@ class BackupManager(dbus.service.Object):
         return self.configmapper.default_rsync_logfile_format
 
     @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s')
-    def SetDefaultRsyncLogfileFormat(self, format):
+    def SetDefaultRsyncLogfileFormat(self, new_format):
         """
         Set the format used in the rsync logfile.
 
@@ -188,10 +194,10 @@ class BackupManager(dbus.service.Object):
             Setting this to an invalid value might render the rsync logfile
             useless.
 
-        :param format: the new format
-        :type format: str
+        :param new_format: the new format
+        :type new_format: str
         """
-        self.configmapper.default_rsync_logfile_format = format
+        self.configmapper.default_rsync_logfile_format = new_format
 
     @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
     def GetDefaultFilters(self):
@@ -776,12 +782,6 @@ class BackupManager(dbus.service.Object):
         for task_name in self.configmapper.task_names:
             self.tasks.append(self._get_task(task_name))
 
-    def _expand_env_vars(self, path):
-        return os.path.expanduser(os.path.expandvars(path))
-
-    def _expand_env_vars_in_list(self, paths):
-        return [self._expand_env_vars(path) for path in paths]
-
     def _get_task_by_name(self, name):
         for task in self.tasks:
             if task.name == name:
@@ -809,18 +809,16 @@ class BackupManager(dbus.service.Object):
         filter_patterns = task_section.filter_patterns
         include_patterns = task_section.include_patterns
         exclude_patterns = task_section.exclude_patterns
-        include_files = self._expand_env_vars_in_list(
-            task_section.include_files)
-        exclude_files = self._expand_env_vars_in_list(
-            task_section.exclude_files)
+        include_files = expand_env_vars_in_list(task_section.include_files)
+        exclude_files = expand_env_vars_in_list(task_section.exclude_files)
 
         create_destination = task_section.create_destination
         one_filesystem = task_section.one_filesystem
         rsync_args = task_section.rsync_args
 
         # these values are unique for every task_section
-        destination = self._expand_env_vars(task_section.destination)
-        sources = self._expand_env_vars_in_list(task_section.sources)
+        destination = expand_env_vars(task_section.destination)
+        sources = expand_env_vars_in_list(task_section.sources)
 
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
@@ -935,8 +933,6 @@ class BackupManager(dbus.service.Object):
         logging.change_to_logfile_logging(
             logfile_path=self.configmapper.logfile_path,
             loglevel=self.configmapper.loglevel_as_int)
-
-        minutely_event = multiprocessing.Event()
 
         for task in self.tasks:
             task.start()

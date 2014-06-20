@@ -51,6 +51,8 @@ class Task(object):
 
         self._backups = self._read_backups()
 
+        self._prcess = None
+
         self._status = TaskStatus.stopped
 
         self._pausing_event = multiprocessing.Event()
@@ -199,19 +201,19 @@ class Task(object):
                                         interval_info=interval_info)
 
     def _create_symlink_backup(self, timestamp, target, interval_info):
-            symlink_name = self._get_folder_name(
-                name=self.name,
-                date=timestamp.strftime(const.DATE_FORMAT),
-                interval_name=interval_info.name)
-            symlink_backup = backupstorage.BackupFolder(os.path.join(
-                self.destination, symlink_name))
-            symlink_backup.set_metadata(name=symlink_name,
-                                        date=timestamp,
-                                        interval_name=interval_info.name)
-            symlink_backup.prepare()
-            symlink_backup.link_data_from(target)
-            symlink_backup.finish()
-            self._register_backup(symlink_backup)
+        symlink_name = self._get_folder_name(
+            name=self.name,
+            date=timestamp.strftime(const.DATE_FORMAT),
+            interval_name=interval_info.name)
+        symlink_backup = backupstorage.BackupFolder(os.path.join(
+            self.destination, symlink_name))
+        symlink_backup.set_metadata(name=symlink_name,
+                                    date=timestamp,
+                                    interval_name=interval_info.name)
+        symlink_backup.prepare()
+        symlink_backup.link_data_from(target)
+        symlink_backup.finish()
+        self._register_backup(symlink_backup)
 
     def _get_folder_name(self, name, date, interval_name):
         return const.PATTERN_BACKUP_FOLDER.format(

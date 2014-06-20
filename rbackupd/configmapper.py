@@ -3,6 +3,7 @@
 
 import functools
 import logging
+import sys
 
 from rbackupd import constants as const
 from rbackupd.config import configmanager
