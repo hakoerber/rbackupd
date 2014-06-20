@@ -34,7 +34,6 @@ class Task(object):
                  destination,
                  scheduling_info,
                  one_filesystem,
-                 ssh_args,
                  rsync_cmd,
                  rsync_args,
                  rsync_logfile_options,
@@ -44,7 +43,6 @@ class Task(object):
         self.destination = destination
         self.scheduling_info = scheduling_info
         self.one_filesystem = one_filesystem
-        self.ssh_args = ssh_args
 
         self.rsync_cmd = rsync_cmd
         self.rsync_args = rsync_args

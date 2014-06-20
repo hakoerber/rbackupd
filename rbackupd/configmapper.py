@@ -260,17 +260,6 @@ class ConfigMapper(object):
         self.configmanager[const.CONF_SECTION_TASKS][
             const.CONF_KEY_RSYNC_ARGS] = value
 
-    @property
-    def default_ssh_args(self):
-        return self._sanitize(self.configmanager[
-            const.CONF_SECTION_TASKS][const.CONF_KEY_SSH_ARGS])
-
-    @default_ssh_args.setter
-    @_write_config_after
-    def default_ssh_args(self, value):
-        self.configmanager[const.CONF_SECTION_TASKS][
-            const.CONF_KEY_SSH_ARGS] = value
-
     class TaskSubsection(object):
         def __init__(self, outer, name, fallback_on_default):
             self.outer = outer
@@ -436,20 +425,6 @@ class ConfigMapper(object):
         def rsync_args(self, value):
             self.section_dict[
                 const.CONF_KEY_RSYNC_ARGS] = value
-
-        @property
-        def ssh_args(self):
-            value = self.outer._sanitize(self.section_dict[
-                const.CONF_KEY_SSH_ARGS])
-            if value is None and self.fallback_on_default is True:
-                return self.outer.default_ssh_args
-            return value
-
-        @ssh_args.setter
-        @_write_config_after
-        def ssh_args(self, value):
-            self.section_dict[
-                const.CONF_KEY_SSH_ARGS] = value
 
         @property
         def sources(self):

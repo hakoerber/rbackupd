@@ -28,7 +28,6 @@ CONF_KEY_EXCLUDE_FILE = "excludefiles"
 CONF_KEY_CREATE_DESTINATION = "create_destination"
 CONF_KEY_ONE_FILESYSTEM = "one_fs"
 CONF_KEY_RSYNC_ARGS = "rsync_args"
-CONF_KEY_SSH_ARGS = "ssh_args"
 
 CONF_SECTION_TASKS = "tasks"
 CONF_KEY_DESTINATION = "destination"
@@ -61,14 +60,6 @@ EXIT_DBUS_ACCESS_DENIED = 17
 
 # The name of the symlink to the latest backup.
 SYMLINK_LATEST_NAME = "latest"
-
-
-# The default rsync command, can be overwritten in the configuration file.
-DEFAULT_RSYNC_CMD = "rsync"
-
-
-# The ssh command
-SSH_CMD = "ssh"
 
 
 NAME_META_FILE = "rbackupd.info"

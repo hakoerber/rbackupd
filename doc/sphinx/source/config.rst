@@ -286,12 +286,6 @@ configuration file (filters etc.).
     Multiple whitespace will be condensed into a single space, so multiple lines
     can be indented nicely.
 
-ssh_args
-~~~~~~~~
-
-This is a string with options that are passed to ``ssh`` when starting a remote
-connection.
-
 tasks
 +++++
 

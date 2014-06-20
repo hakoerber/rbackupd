@@ -343,27 +343,6 @@ class BackupManager(dbus.service.Object):
         """
         self.configmapper.default_one_filesystem = value
 
-    @dbus.service.method(const.DBUS_BUS_NAME, out_signature='s')
-    def GetDefaultSSHArgs(self):
-        """
-        Get the arguments that will be passed to ssh when creating remote
-        backups.
-
-        :rtype: str
-        """
-        return self.configmapper.default_ssh_args
-
-    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='b')
-    def SetDefaultSSHArgs(self, args):
-        """
-        Set the arguments that will be passed to ssh when creating remote
-        backups.
-
-        :param args: the new arguments
-        :type args: str
-        """
-        self.configmapper.default_ssh_args = args
-
     @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
                          out_signature='as')
     def GetTaskSources(self, task):
@@ -721,32 +700,6 @@ class BackupManager(dbus.service.Object):
         """
         self.configmapper.task(task).one_filesystem = value
 
-    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
-                         out_signature='s')
-    def GetTaskSSHArgs(self, task):
-        """
-        Get the arguments that will be passed to ssh when creating remote
-        backups  and you have to fall back
-        on the default values.
-
-        :param task: the name of the task to work on
-        :type task: str
-
-        :rtype: str or None
-        """
-        return self.configmapper.task(task).ssh_args
-
-    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
-    def SetTaskSSHArgs(self, task, args):
-        """
-        Set the arguments that will be passed to ssh when creating remote
-        backups.
-
-        :param task: the name of the task to work on
-        :type task: str
-        """
-        self.configmapper.task(task).ssh_args = args
-
     @dbus.service.method(const.DBUS_BUS_NAME, out_signature='as')
     def GetTaskNames(self):
         """
@@ -864,7 +817,6 @@ class BackupManager(dbus.service.Object):
         create_destination = task_section.create_destination
         one_filesystem = task_section.one_filesystem
         rsync_args = task_section.rsync_args
-        ssh_args = task_section.ssh_args
 
         # these values are unique for every task_section
         destination = self._expand_env_vars(task_section.destination)
@@ -950,7 +902,6 @@ class BackupManager(dbus.service.Object):
             destination=destination,
             scheduling_info=task_scheduling_info,
             one_filesystem=one_filesystem,
-            ssh_args=ssh_args,
             rsync_cmd=self.configmapper.rsync_command,
             rsync_args=rsync_args,
             rsync_logfile_options=rsync_logfile_options,
