@@ -97,7 +97,7 @@ class Task(object):
                     "read: \"%s\"",
                     error.path,
                     error.message)
-                sys.exit(const.EXIT_ERROR_GENERAL)
+                sys.exit(const.EXIT_ERROR_OTHER)
 
             backups.append(backup)
         logger.debug("Task \"%s\": Found the following folders: %s.",

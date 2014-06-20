@@ -71,17 +71,17 @@ class ConfigMapper(object):
 
         except IOError as error:
             logger.critical("Error accessing a file: %s", str(error))
-            exit(const.EXIT_FILE_NOT_FOUND)
+            sys.exit(const.EXIT_CONFIG_FILE_NOT_FOUND)
         except configmanager.ValidationError as error:
             logger.critical("The validation of the configuration file failed. "
                             "Message:\n%s", str(error))
-            exit(const.EXIT_CONFIG_FILE_INVALID)
+            sys.exit(const.EXIT_CONFIG_FILE_INVALID)
         except configmanager.ConfigError as err:
             logger.critical("Invalid config file: error line %s (\"%s\"): %s",
                             err.line_number,
                             err.line,
                             err.msg)
-            exit(const.EXIT_CONFIG_FILE_INVALID)
+            sys.exit(const.EXIT_CONFIG_FILE_INVALID)
         logger.debug("Config file parsed successfully.")
 
     def write_config(self):

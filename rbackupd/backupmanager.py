@@ -825,7 +825,7 @@ class BackupManager(dbus.service.Object):
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
                 logger.critical("Empty pattern found. Aborting.")
-                sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
+                sys.exit(const.EXIT_CONFIG_FILE_INVALID)
 
         # now we can validate the values we got
         if not os.path.exists(destination):
@@ -844,11 +844,11 @@ class BackupManager(dbus.service.Object):
         for filter_file in include_files + exclude_files:
             if not os.path.exists(filter_file):
                 logger.critical("File \"%s\" not found. Aborting.", filter_file)
-                sys.exit(const.FILE_NOT_FOUND)
+                sys.exit(const.EXIT_FILE_NOT_FOUND)
             if not os.path.isfile(filter_file):
                 logger.critical("File \"%s\" is not a valid file. Aborting",
                                 filter_file)
-                sys.exit(const.FILE_INVALID)
+                sys.exit(const.EXIT_FILE_INVALID)
 
         task_scheduling_info = task.TaskSchedulingInfo()
         # these are the subsection of the task that contain scheduling
@@ -911,10 +911,10 @@ class BackupManager(dbus.service.Object):
         rsync_cmd = self.configmapper.rsync_command
         if not os.path.isabs(rsync_cmd):
             logger.critical("The rsync command must be an absolute path.")
-            sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
+            sys.exit(const.EXIT_CONFIG_FILE_INVALID)
         if not os.path.isfile(rsync_cmd) and os.access(rsync_cmd, os.X_OK):
             logger.critical("\"%s\" is no a valid executable")
-            sys.exit(const.EXIT_INVALID_CONFIG_VALUE)
+            sys.exit(const.EXIT_CONFIG_FILE_INVALID)
 
     def start(self):
         """
