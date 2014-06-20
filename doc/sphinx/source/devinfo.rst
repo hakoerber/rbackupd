@@ -114,6 +114,8 @@ that deserve an explanation:
   the browser
 - ``stats.sh`` shows some stats about the source files
 - ``tests.sh`` runs all available tests and reports back
+- ``clean.sh`` removes all files that can be regenerated or is unnecessary, such
+  as everything in the build directory and log files.
 - ``run.sh`` runs the daemon process and makes sure to use the packages in the
   source tree instead of installed ones
 - ``run-client.sh`` does the same as the above, but with the client program.
