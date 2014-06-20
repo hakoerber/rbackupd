@@ -435,3 +435,16 @@ The format to specify an age is very simple, it is just an integer with a
 - ``M`` for months
 
 You cannot combine the multipliers with each other.
+
+.. note::
+    A month cannot be expressed in a fixed amount of days. Therefore, we define
+    `a month ago` as `the current day of month one month ago`. If the current
+    day of month is higher than the maximum day of month a month ago, we use the
+    last day of the previous month.
+
+    This means:
+
+    - a month ago from June 21st is May 21st
+    - a month ago from July 31st is June 30th
+    - a month ago from March 31st is usually February 28th and February 29th in
+      a leap year
