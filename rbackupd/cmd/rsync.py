@@ -132,18 +132,18 @@ class Filter(object):
         """
         args = []
         for rfilter in self.filters:
-            args.extend(["--filter", rfilter])
+            args.extend(["--filter", "\'{val}\'".format(val=rfilter)])
 
         for pattern in self.include_patterns:
-            args.extend(["--include", pattern])
+            args.extend(["--include", "\'{val}\'".format(val=pattern)])
 
         for patternfile in self.include_files:
-            args.extend(["--include-from", patternfile])
+            args.extend(["--include-from", "\'{val}\'".format(val=patternfile)])
 
         for pattern in self.exclude_patterns:
-            args.extend(["--exclude", pattern])
+            args.extend(["--exclude", "\'{val}\'".format(val=pattern)])
 
         for patternfile in self.exclude_files:
-            args.extend(["--exclude-from", patternfile])
+            args.extend(["--exclude-from", "\'{val}\'".format(val=patternfile)])
 
         return args
