@@ -398,6 +398,78 @@ class BackupManager(dbus.service.Object):
         self.configmapper.task(task).destination = destination
 
     @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskDestinationHost(self, task):
+        """
+        Return the host of the destination of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).destination_host
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskDestinationHost(self, task, host):
+        """
+        Set the desination host of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param destination: the new destination host
+        :type destination: str
+        """
+        self.configmapper.task(task).destination_host = host
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskSSHPort(self, task):
+        """
+        Return the SSH port of the destination of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).ssh_port
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskSSHPort(self, task, port):
+        """
+        Set the SSH port of the desination of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param destination: the new SSH port
+        :type destination: str
+        """
+        self.configmapper.task(task).ssh_port = port
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetTaskIdentityFile(self, task):
+        """
+        Return the SSH identity file of the destination of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).identity_file
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetTaskSSHPort(self, task, file):
+        """
+        Set the SSH identity file of the desination of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param destination: the new identity file
+        :type destination: str
+        """
+        self.configmapper.task(task).identity_file = port
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
                          out_signature='b')
     def GetTaskRsyncLogfile(self, task):
         """

@@ -22,6 +22,9 @@ CONF_KEY_RSYNC_ARGS = "rsync_args"
 
 CONF_SECTION_TASKS = "tasks"
 CONF_KEY_DESTINATION = "destination"
+CONF_KEY_DESTINATION_HOST = "destination_host"
+CONF_KEY_SSH_PORT = "ssh_port"
+CONF_KEY_IDENTITY_FILE = "identity_file"
 CONF_KEY_SOURCES = "sources"
 CONF_KEY_TASKNAME = "name"
 

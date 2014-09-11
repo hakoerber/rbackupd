@@ -448,6 +448,36 @@ class ConfigMapper(object):
             self.section_dict[const.CONF_KEY_DESTINATION] = value
 
         @property
+        def destination_host(self):
+            return self.outer._sanitize(self.section.dict[
+                const.CONF_KEY_DESTINATION_HOST])
+
+        @destination_host.setter
+        @_write_config_after
+        def destination_host(self, value):
+            self.section_dict[const.CONF_KEY_DESTINATION_HOST] = value
+
+        @property
+        def ssh_port(self):
+            return self.outer._sanitize(self.section.dict[
+                const.CONF_KEY_SSH_PORT])
+
+        @ssh_port.setter
+        @_write_config_after
+        def ssh_port(self, value):
+            self.section_dict[const.CONF_KEY_SSH_PORT] = value
+
+        @property
+        def identity_file(self):
+            return self.outer._sanitize(self.section.dict[
+                const.CONF_KEY_IDENTITY_FILE])
+
+        @identity_file.setter
+        @_write_config_after
+        def identity_file(self, value):
+            self.section_dict[const.CONF_KEY_IDENTITY_FILE] = value
+
+        @property
         def interval_names(self):
             return self.section_dict[const.CONF_SECTION_INTERVALS].keys()
 
