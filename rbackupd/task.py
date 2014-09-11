@@ -260,7 +260,7 @@ class Task(object):
             rsyncfilter=params.rsync_filter,
             loggingOptions=params.rsync_logfile_options)
         if returncode != 0:
-            logger.critical("Rsync failed. Aborting. Stderr:\n%s",
+            logger.critical("Rsync failed. Aborting task. Stderr:\n%s",
                             stderrdata)
             sys.exit(const.EXIT_RSYNC_FAILED)
         else:

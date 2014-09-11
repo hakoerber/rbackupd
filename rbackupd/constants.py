@@ -25,6 +25,7 @@ CONF_KEY_DESTINATION = "destination"
 CONF_KEY_DESTINATION_HOST = "destination_host"
 CONF_KEY_SSH_PORT = "ssh_port"
 CONF_KEY_IDENTITY_FILE = "identity_file"
+CONF_KEY_REMOTE_USER = "remote_user"
 CONF_KEY_SOURCES = "sources"
 CONF_KEY_TASKNAME = "name"
 
@@ -42,6 +43,7 @@ EXIT_NO_CREATE_DESTINATION = 5
 EXIT_INVALID_DESTINATION = 6
 EXIT_CONFIG_FILE_INVALID = 7
 EXIT_DBUS_ERROR = 8
+EXIT_SSHFS_ERROR = 9
 
 EXIT_ERROR_OTHER = 100
 
@@ -81,3 +83,5 @@ LOGGING_CONSOLE_FORMAT = "[{asctime}] [{levelname}] {message}"
 LOGGING_CONSOLE_DATE_FORMAT = "%H:%M:%S"
 LOGGING_FILE_FORMAT = "[{asctime}] [{levelname}] {filename}: {message}"
 LOGGING_FILE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+SSHFS_TEMP_DIR = "/var/run/rbackupd/sshfs"

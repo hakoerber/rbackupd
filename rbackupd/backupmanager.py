@@ -7,14 +7,17 @@ The backupmanager module.
 
 import logging
 import os
-import sys
-import dbus.service
 import dbus.mainloop.glib
+import dbus.service
 import gi.repository.GObject
 import multiprocessing
+import socket
+import subprocess
+import sys
 
 from rbackupd import configmapper
 from rbackupd import constants as const
+from rbackupd import ssh
 from rbackupd import task
 from rbackupd.cmd import rsync
 from rbackupd.schedule import cron
@@ -26,11 +29,19 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 
 def expand_env_vars(path):
+    if path is None:
+        return None
     return os.path.expanduser(os.path.expandvars(path))
 
 
 def expand_env_vars_in_list(paths):
     return [expand_env_vars(path) for path in paths]
+
+
+def resolve_custom_vars(value):
+    if '%h' in value:
+        value = value.replace('%h', socket.gethostname())
+    return value
 
 
 class BackupManager(dbus.service.Object):
@@ -51,7 +62,8 @@ class BackupManager(dbus.service.Object):
                                               dbus.SystemBus()),
                 object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
         except dbus.exceptions.DBusException as e:
-            logger.critical("DBus connection failed: {0}".format(e.get_dbus_message()))
+            logger.critical("DBus connection failed: {0}".format(
+                e.get_dbus_message()))
             sys.exit(const.EXIT_DBUS_ERROR)
 
         if not os.path.exists(config_path):
@@ -457,7 +469,7 @@ class BackupManager(dbus.service.Object):
         return self.configmapper.task(task).identity_file
 
     @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
-    def SetTaskSSHPort(self, task, file):
+    def SetIdentityFile(self, task, file):
         """
         Set the SSH identity file of the desination of the given task.
 
@@ -468,6 +480,30 @@ class BackupManager(dbus.service.Object):
         :type destination: str
         """
         self.configmapper.task(task).identity_file = port
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
+                         out_signature='s')
+    def GetRemoteUser(self, task):
+        """
+        Return the remote user of the destination of the given task.
+
+        :param task. the name of the task to work on
+        :type task: str
+        """
+        return self.configmapper.task(task).remote_user
+
+    @dbus.service.method(const.DBUS_BUS_NAME, in_signature='ss')
+    def SetRemoteUser(self, task, user):
+        """
+        Set the remote user of the desination of the given task.
+
+        :param task: the name of the task to work on
+        :type task: str
+
+        :param destination: the new username
+        :type destination: str
+        """
+        self.configmapper.task(task).remote_user = user
 
     @dbus.service.method(const.DBUS_BUS_NAME, in_signature='s',
                          out_signature='b')
@@ -892,33 +928,71 @@ class BackupManager(dbus.service.Object):
         destination = expand_env_vars(task_section.destination)
         sources = expand_env_vars_in_list(task_section.sources)
 
+        destination_host = expand_env_vars(task_section.destination_host)
+        ssh_port = expand_env_vars(task_section.ssh_port)
+        identity_file = expand_env_vars(task_section.identity_file)
+        remote_user = expand_env_vars(task_section.remote_user)
+
+        remote = destination_host is not None
+
+        if remote:
+            destination = resolve_custom_vars(destination)
+
+            ssh_info = ssh.SSHInfo(host=destination_host,
+                                   user=remote_user,
+                                   port=ssh_port,
+                                   identity_file=identity_file)
+            remote_location = ssh.RemoteLocation(ssh_info=ssh_info,
+                                                 path=destination)
+            if not os.path.exists(const.SSHFS_TEMP_DIR):
+                os.makedirs(const.SSHFS_TEMP_DIR)
+
+            if not os.path.ismount(const.SSHFS_TEMP_DIR):
+                logger.info("Establishing remote connection.")
+                try:
+                    remote_location.mount(const.SSHFS_TEMP_DIR)
+                except subprocess.CalledProcessError as e:
+                    logger.critical("Remote connection could not be "
+                                    "established. sshfs output:\n{msg}".format(
+                                        msg=str(e.output)))
+                    sys.exit(const.EXIT_SSHFS_ERROR)
+
+            else:
+                logger.info("Remote connection already established.")
+
+            destination = const.SSHFS_TEMP_DIR
+            rsync_args += " --no-group --no-owner"
+
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
                 logger.critical("Empty pattern found. Aborting.")
                 sys.exit(const.EXIT_CONFIG_FILE_INVALID)
 
         # now we can validate the values we got
-        if not os.path.exists(destination):
-            if not create_destination:
-                logger.critical("Destination folder \"%s\" does not exist and "
-                                "shall not be created. Aborting.", destination)
-                sys.exit(const.EXIT_NO_CREATE_DESTINATION)
+        if not remote:
+            if not os.path.exists(destination):
+                if not create_destination:
+                    logger.critical("Destination folder \"%s\" does not exist "
+                                    "and shall not be created. Aborting.",
+                                    destination)
+                    sys.exit(const.EXIT_NO_CREATE_DESTINATION)
+                else:
+                    os.mkdir(destination)
             else:
-                os.mkdir(destination)
-        else:
-            if not os.path.isdir(destination):
-                logger.critical("Destination \"%s\" exists, but is not a valid "
-                                "directory.", destination)
-                sys.exit(const.EXIT_INVALID_DESTINATION)
+                if not os.path.isdir(destination):
+                    logger.critical("Destination \"%s\" exists, but is not a "
+                                    " valid directory.", destination)
+                    sys.exit(const.EXIT_INVALID_DESTINATION)
 
-        for filter_file in include_files + exclude_files:
-            if not os.path.exists(filter_file):
-                logger.critical("File \"%s\" not found. Aborting.", filter_file)
-                sys.exit(const.EXIT_FILE_NOT_FOUND)
-            if not os.path.isfile(filter_file):
-                logger.critical("File \"%s\" is not a valid file. Aborting",
-                                filter_file)
-                sys.exit(const.EXIT_FILE_INVALID)
+            for filter_file in include_files + exclude_files:
+                if not os.path.exists(filter_file):
+                    logger.critical("File \"%s\" not found. Aborting.",
+                                    filter_file)
+                    sys.exit(const.EXIT_FILE_NOT_FOUND)
+                if not os.path.isfile(filter_file):
+                    logger.critical("File \"%s\" is not a valid file. Aborting",
+                                    filter_file)
+                    sys.exit(const.EXIT_FILE_INVALID)
 
         task_scheduling_info = task.TaskSchedulingInfo()
         # these are the subsection of the task that contain scheduling

@@ -478,6 +478,16 @@ class ConfigMapper(object):
             self.section_dict[const.CONF_KEY_IDENTITY_FILE] = value
 
         @property
+        def remote_user(self):
+            return self.outer._sanitize(self.section_dict[
+                const.CONF_KEY_REMOTE_USER])
+
+        @remote_user.setter
+        @_write_config_after
+        def remote_user(self, value):
+            self.section_dict[const.CONF_KEY_REMOTE_USER] = value
+
+        @property
         def interval_names(self):
             return self.section_dict[const.CONF_SECTION_INTERVALS].keys()
 
