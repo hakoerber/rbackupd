@@ -50,9 +50,9 @@ class BackupManager(dbus.service.Object):
                 bus_name=dbus.service.BusName(const.DBUS_BUS_NAME,
                                               dbus.SystemBus()),
                 object_path=const.DBUS_OBJECT_PATH_BACKUP_MANAGER)
-        except dbus.exceptions.DBusException:
-            logger.critical("DBus connection failed: access denied.")
-            sys.exit(const.EXIT_DBUS_ACCESS_DENIED)
+        except dbus.exceptions.DBusException as e:
+            logger.critical("DBus connection failed: {0}".format(e.get_dbus_message()))
+            sys.exit(const.EXIT_DBUS_ERROR)
 
         if not os.path.exists(config_path):
             logger.critical("Config file not found. Aborting.")
