@@ -449,7 +449,7 @@ class ConfigMapper(object):
 
         @property
         def destination_host(self):
-            return self.outer._sanitize(self.section.dict[
+            return self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_DESTINATION_HOST])
 
         @destination_host.setter
@@ -459,7 +459,7 @@ class ConfigMapper(object):
 
         @property
         def ssh_port(self):
-            return self.outer._sanitize(self.section.dict[
+            return self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_SSH_PORT])
 
         @ssh_port.setter
@@ -469,7 +469,7 @@ class ConfigMapper(object):
 
         @property
         def identity_file(self):
-            return self.outer._sanitize(self.section.dict[
+            return self.outer._sanitize(self.section_dict[
                 const.CONF_KEY_IDENTITY_FILE])
 
         @identity_file.setter
