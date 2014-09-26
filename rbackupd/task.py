@@ -37,7 +37,8 @@ class Task(object):
                  rsync_cmd,
                  rsync_args,
                  rsync_logfile_options,
-                 rsync_filter):
+                 rsync_filter,
+                 targetdest):
         self.name = name
         self.sources = sources
         self.destination = destination
@@ -58,6 +59,8 @@ class Task(object):
         self._pausing_event = multiprocessing.Event()
         self._event_exit = multiprocessing.Event()
         self._paused_event = multiprocessing.Event()
+
+        self.targetdest = targetdest
 
     def _is_latest_symlink(self, folder):
         return folder == const.SYMLINK_LATEST_NAME
@@ -83,7 +86,7 @@ class Task(object):
                 continue
 
             backup = backupstorage.BackupFolder(
-                os.path.join(self.destination, folder))
+                os.path.join(self.destination, folder), self.targetdest)
 
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
@@ -254,7 +257,7 @@ class Task(object):
         (returncode, stdoutdata, stderrdata) = rsync.rsync(
             command=params.rsync_cmd,
             sources=self.sources,
-            destination=destination,
+            destination=targetdest,
             link_ref=link_dest,
             arguments=params.rsync_args,
             rsyncfilter=params.rsync_filter,

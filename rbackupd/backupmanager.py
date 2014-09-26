@@ -957,11 +957,14 @@ class BackupManager(dbus.service.Object):
                                         msg=str(e.output)))
                     sys.exit(const.EXIT_SSHFS_ERROR)
 
+                logger.info("Remote connection successfully established.")
+
             else:
                 logger.info("Remote connection already established.")
 
+            targetdest = destination
             destination = const.SSHFS_TEMP_DIR
-            rsync_args += " --no-group --no-owner"
+
 
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
@@ -969,30 +972,29 @@ class BackupManager(dbus.service.Object):
                 sys.exit(const.EXIT_CONFIG_FILE_INVALID)
 
         # now we can validate the values we got
-        if not remote:
-            if not os.path.exists(destination):
-                if not create_destination:
-                    logger.critical("Destination folder \"%s\" does not exist "
-                                    "and shall not be created. Aborting.",
-                                    destination)
-                    sys.exit(const.EXIT_NO_CREATE_DESTINATION)
-                else:
-                    os.mkdir(destination)
+        if not os.path.exists(destination):
+            if not create_destination:
+                logger.critical("Destination folder \"%s\" does not exist "
+                                "and shall not be created. Aborting.",
+                                destination)
+                sys.exit(const.EXIT_NO_CREATE_DESTINATION)
             else:
-                if not os.path.isdir(destination):
-                    logger.critical("Destination \"%s\" exists, but is not a "
-                                    " valid directory.", destination)
-                    sys.exit(const.EXIT_INVALID_DESTINATION)
+                os.mkdir(destination)
+        else:
+            if not os.path.isdir(destination):
+                logger.critical("Destination \"%s\" exists, but is not a "
+                                " valid directory.", destination)
+                sys.exit(const.EXIT_INVALID_DESTINATION)
 
-            for filter_file in include_files + exclude_files:
-                if not os.path.exists(filter_file):
-                    logger.critical("File \"%s\" not found. Aborting.",
-                                    filter_file)
-                    sys.exit(const.EXIT_FILE_NOT_FOUND)
-                if not os.path.isfile(filter_file):
-                    logger.critical("File \"%s\" is not a valid file. Aborting",
-                                    filter_file)
-                    sys.exit(const.EXIT_FILE_INVALID)
+        for filter_file in include_files + exclude_files:
+            if not os.path.exists(filter_file):
+                logger.critical("File \"%s\" not found. Aborting.",
+                                filter_file)
+                sys.exit(const.EXIT_FILE_NOT_FOUND)
+            if not os.path.isfile(filter_file):
+                logger.critical("File \"%s\" is not a valid file. Aborting",
+                                filter_file)
+                sys.exit(const.EXIT_FILE_INVALID)
 
         task_scheduling_info = task.TaskSchedulingInfo()
         # these are the subsection of the task that contain scheduling
@@ -1049,7 +1051,8 @@ class BackupManager(dbus.service.Object):
             rsync_cmd=self.configmapper.rsync_command,
             rsync_args=rsync_args,
             rsync_logfile_options=rsync_logfile_options,
-            rsync_filter=rsync_filter)
+            rsync_filter=rsync_filter,
+            targetdest=targetdest)
 
     def _validate_values(self):
         rsync_cmd = self.configmapper.rsync_command

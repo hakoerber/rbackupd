@@ -48,9 +48,9 @@ def rsync(command, sources, destination, link_ref, arguments, rsyncfilter,
     """
     args = [command]
 
-    args.extend(rsyncfilter.get_args())
+    args.extend(arguments)
 
-    args.extend(shlex.split(arguments))
+    args.extend(rsyncfilter.get_args())
 
     if link_ref is not None:
         args.append("--link-dest=%s" % link_ref)
@@ -132,18 +132,18 @@ class Filter(object):
         """
         args = []
         for rfilter in self.filters:
-            args.extend(["--filter", "\'{val}\'".format(val=rfilter)])
+            args.extend(["--filter={val}".format(val=rfilter)])
 
         for pattern in self.include_patterns:
-            args.extend(["--include", "\'{val}\'".format(val=pattern)])
+            args.extend(["--include={val}".format(val=pattern)])
 
         for patternfile in self.include_files:
-            args.extend(["--include-from", "\'{val}\'".format(val=patternfile)])
+            args.extend(["--include-from={val}".format(val=patternfile)])
 
         for pattern in self.exclude_patterns:
-            args.extend(["--exclude", "\'{val}\'".format(val=pattern)])
+            args.extend(["--exclude={val}".format(val=pattern)])
 
         for patternfile in self.exclude_files:
-            args.extend(["--exclude-from", "\'{val}\'".format(val=patternfile)])
+            args.extend(["--exclude-from={val}".format(val=patternfile)])
 
         return args

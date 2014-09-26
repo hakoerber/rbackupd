@@ -1,1 +1,2 @@
 clean thread exiting on error
+supress rsync output (log is enough)

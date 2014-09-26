@@ -181,11 +181,12 @@ class BackupFolder(BackupStorage):
     :type path: str
     """
 
-    def __init__(self, path):
+    def __init__(self, path, target):
         BackupStorage.__init__(self)
         self._path = path
         self.meta_file = BackupMetadataFile(
             os.path.join(self.path, const.NAME_META_FILE))
+        self.targetdest = targetdest
 
     def _read_meta_file(self):
         """

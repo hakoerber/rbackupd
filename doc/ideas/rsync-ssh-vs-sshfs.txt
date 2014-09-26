@@ -8,3 +8,19 @@ before, so one would be necessary anyway. But the procedure would be a lot
 cleaner, as we could do the checks over the connection, terminate it, and then
 use sshfs. This way, we could later extend the procedure and do remote mounting
 for example, but be done with it before actually doing the backup.
+
+update:
+doing the rsync operation to a locally mounted sshfs folder is unfeasible. This
+is because rsync sees both source and destination as local and does all
+calculations on the local machine instead of splitting the workload over both
+the local and the remote machine. Additionally and more important, rsync has to
+get the remote files over the network to compute the transfer lists and diffs,
+instead this being done by the remotely spawned rsync deamon on the other
+machine.
+
+So using ssh for the actual transfer is necessary anyway. But as everything that
+involves the destination is filesystem stuff, we can still use sshfs to mount
+the destination locally to simplify the destination checks.
+
+Alternatively, a proper ssh connection with paramiko could be used, which would
+be much more clean.
