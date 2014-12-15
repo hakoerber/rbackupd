@@ -20,6 +20,13 @@ can access all files owned by him without requiring root privileges.
 
 rbackupd is written in python, for version 3.3.
 
+Disclaimer
+----------
+
+This program is **not ready for production or day-to-day use**. It is still in
+an early alpha stage and might contain severe bugs that potentially destroy your
+data.
+
 Requirements
 ------------
 
