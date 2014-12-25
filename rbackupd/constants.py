@@ -26,6 +26,7 @@ CONF_KEY_DESTINATION_HOST = "destination_host"
 CONF_KEY_SSH_PORT = "ssh_port"
 CONF_KEY_IDENTITY_FILE = "identity_file"
 CONF_KEY_REMOTE_USER = "remote_user"
+CONF_KEY_AUTO_ADD_HOST_KEY = "auto_add_host_key"
 CONF_KEY_SOURCES = "sources"
 CONF_KEY_TASKNAME = "name"
 

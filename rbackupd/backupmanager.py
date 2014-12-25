@@ -6,7 +6,7 @@ The backupmanager module.
 """
 
 import logging
-import os
+import os.path
 import dbus.mainloop.glib
 import dbus.service
 import gi.repository.GObject
@@ -15,13 +15,17 @@ import socket
 import subprocess
 import sys
 
+from rbackupd import cmd
 from rbackupd import configmapper
 from rbackupd import constants as const
-from rbackupd import ssh
 from rbackupd import task
-from rbackupd.cmd import rsync
+from rbackupd.process import rsync
+from rbackupd.remote import host
+from rbackupd.remote import path
+from rbackupd.remote import ssh
 from rbackupd.schedule import cron
 from rbackupd.schedule import interval
+
 
 logger = logging.getLogger(__name__)
 
@@ -932,39 +936,25 @@ class BackupManager(dbus.service.Object):
         ssh_port = expand_env_vars(task_section.ssh_port)
         identity_file = expand_env_vars(task_section.identity_file)
         remote_user = expand_env_vars(task_section.remote_user)
+        auto_add_host_key = task_section.auto_add_host_key
 
-        remote = destination_host is not None
+        if destination_host is not None:
+            destination_host = host.Host(ip=destination_host)
+        else:
+            destination_host = host.get_localhost()
 
-        if remote:
-            destination = resolve_custom_vars(destination)
+        if destination_host.is_localhost():
+            connection_parameters = None
+        else:
+            connection_parameters = ssh.ConnectionParameters(
+                host=destination_host,
+                port=ssh_port,
+                user=remote_user,
+                identity_file=identity_file,
+                auto_add_host_key=auto_add_host_key)
 
-            ssh_info = ssh.SSHInfo(host=destination_host,
-                                   user=remote_user,
-                                   port=ssh_port,
-                                   identity_file=identity_file)
-            remote_location = ssh.RemoteLocation(ssh_info=ssh_info,
-                                                 path=destination)
-            if not os.path.exists(const.SSHFS_TEMP_DIR):
-                os.makedirs(const.SSHFS_TEMP_DIR)
-
-            if not os.path.ismount(const.SSHFS_TEMP_DIR):
-                logger.info("Establishing remote connection.")
-                try:
-                    remote_location.mount(const.SSHFS_TEMP_DIR)
-                except subprocess.CalledProcessError as e:
-                    logger.critical("Remote connection could not be "
-                                    "established. sshfs output:\n{msg}".format(
-                                        msg=str(e.output)))
-                    sys.exit(const.EXIT_SSHFS_ERROR)
-
-                logger.info("Remote connection successfully established.")
-
-            else:
-                logger.info("Remote connection already established.")
-
-            targetdest = destination
-            destination = const.SSHFS_TEMP_DIR
-
+        destination = path.Path(path=resolve_custom_vars(destination),
+                                connection_parameters=connection_parameters)
 
         for pattern in filter_patterns + include_patterns + exclude_patterns:
             if len(pattern) == 0:
@@ -972,22 +962,22 @@ class BackupManager(dbus.service.Object):
                 sys.exit(const.EXIT_CONFIG_FILE_INVALID)
 
         # now we can validate the values we got
-        if not os.path.exists(destination):
+        if not cmd.exists(destination):
             if not create_destination:
                 logger.critical("Destination folder \"%s\" does not exist "
                                 "and shall not be created. Aborting.",
                                 destination)
                 sys.exit(const.EXIT_NO_CREATE_DESTINATION)
             else:
-                os.mkdir(destination)
+                cmd.mkdir(destination)
         else:
-            if not os.path.isdir(destination):
+            if not cmd.is_directory(destination):
                 logger.critical("Destination \"%s\" exists, but is not a "
                                 " valid directory.", destination)
                 sys.exit(const.EXIT_INVALID_DESTINATION)
 
         for filter_file in include_files + exclude_files:
-            if not os.path.exists(filter_file):
+            if not cmd.exists(filter_file):
                 logger.critical("File \"%s\" not found. Aborting.",
                                 filter_file)
                 sys.exit(const.EXIT_FILE_NOT_FOUND)
@@ -1051,8 +1041,7 @@ class BackupManager(dbus.service.Object):
             rsync_cmd=self.configmapper.rsync_command,
             rsync_args=rsync_args,
             rsync_logfile_options=rsync_logfile_options,
-            rsync_filter=rsync_filter,
-            targetdest=targetdest)
+            rsync_filter=rsync_filter)
 
     def _validate_values(self):
         rsync_cmd = self.configmapper.rsync_command
@@ -1076,7 +1065,7 @@ class BackupManager(dbus.service.Object):
         if not os.path.exists(logfile_dir):
             logger.debug("Folder containing log file does not exist, will be "
                          "created.")
-            os.mkdir(logfile_dir)
+            cmd.mkdir(logfile_dir)
 
         # now we can change from logging into memory to logging to the logfile
         logging.change_to_logfile_logging(

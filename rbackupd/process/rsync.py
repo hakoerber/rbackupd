@@ -10,7 +10,7 @@ import logging
 import os
 import shlex
 
-from rbackupd.cmd import process
+from rbackupd.process import process
 
 logger = logging.getLogger(__name__)
 

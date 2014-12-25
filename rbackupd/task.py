@@ -9,14 +9,14 @@ import datetime
 import enum
 import logging
 import multiprocessing
-import os
+import os.path
 import sys
 import time
 
 from rbackupd import backupstorage
+from rbackupd import cmd
 from rbackupd import constants as const
-from rbackupd.cmd import files
-from rbackupd.cmd import rsync
+from rbackupd.process import rsync
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +37,7 @@ class Task(object):
                  rsync_cmd,
                  rsync_args,
                  rsync_logfile_options,
-                 rsync_filter,
-                 targetdest):
+                 rsync_filter):
         self.name = name
         self.sources = sources
         self.destination = destination
@@ -60,8 +59,6 @@ class Task(object):
         self._event_exit = multiprocessing.Event()
         self._paused_event = multiprocessing.Event()
 
-        self.targetdest = targetdest
-
     def _is_latest_symlink(self, folder):
         return folder == const.SYMLINK_LATEST_NAME
 
@@ -79,14 +76,14 @@ class Task(object):
         """
         logger.debug("Task \"%s\": Reading backups.", self.name)
         backups = []
-        for folder in os.listdir(self.destination):
+        for folder in cmd.listdir(self.destination):
             if self._is_latest_symlink(folder):
                 logger.debug("Task \"%s\": Ignoring latest symlink "
                              "\"%s\".", self.name, folder)
                 continue
 
             backup = backupstorage.BackupFolder(
-                os.path.join(self.destination, folder), self.targetdest)
+                os.path.join(self.destination, folder))
 
             if not backup.is_finished():
                 logger.warning("Backup \"%s\" is not recognized as a valid "
@@ -257,7 +254,7 @@ class Task(object):
         (returncode, stdoutdata, stderrdata) = rsync.rsync(
             command=params.rsync_cmd,
             sources=self.sources,
-            destination=targetdest,
+            destination=self.destination,
             link_ref=link_dest,
             arguments=params.rsync_args,
             rsyncfilter=params.rsync_filter,
@@ -367,9 +364,9 @@ class Task(object):
                      destination)
         symlink_latest = os.path.join(self.destination,
                                       const.SYMLINK_LATEST_NAME)
-        if os.path.islink(symlink_latest):
-            files.remove_symlink(symlink_latest)
-        files.create_symlink(destination, symlink_latest)
+        if cmd.is_symlink(symlink_latest):
+            file.remove_symlink(symlink_latest)
+        file.create_symlink(destination, symlink_latest)
         logger.debug("Latest symlink fixed.")
 
     def _get_expired_backups_by_count(self, backups, max_count):

@@ -83,7 +83,8 @@ import logging
 import functools
 
 from rbackupd import constants as const
-from rbackupd.cmd import files
+from rbackupd.remote import path
+import rbackupd.cmd as cmd
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +186,7 @@ class BackupFolder(BackupStorage):
         BackupStorage.__init__(self)
         self._path = path
         self.meta_file = BackupMetadataFile(
-            os.path.join(self.path, const.NAME_META_FILE))
+            path.join(self.path, const.NAME_META_FILE))
         self.targetdest = targetdest
 
     def _read_meta_file(self):
@@ -320,7 +321,7 @@ class BackupFolder(BackupStorage):
         logger.info("Creating symlink \"%s\" pointing to \"%s\"",
                     link_name,
                     link_target)
-        files.create_symlink(link_target, link_name)
+        file.create_symlink(link_target, link_name)
 
     def data_is_link(self):
         """
@@ -361,7 +362,7 @@ class BackupFolder(BackupStorage):
         Removes the backup folder.
         """
         logger.info("Removing directory \"%s\".", self.path)
-        files.remove_recursive(self.path)
+        file.remove_recursive(self.path)
 
     def remove_data_link(self):
         """
@@ -373,7 +374,7 @@ class BackupFolder(BackupStorage):
         logger.info("Removing data link at \"%s\"", self.data_path)
         if not self.data_is_link():
             raise ValueError("the data is not a link")
-        files.remove_symlink(self.data_path)
+        file.remove_symlink(self.data_path)
 
     def move_data_to(self, storage):
         """
@@ -397,7 +398,7 @@ class BackupFolder(BackupStorage):
         logger.debug("Moving data from folder \"%s\" to folder \"%s\"",
                      self.path,
                      storage.path)
-        files.move(self.data_path, storage.data_path)
+        file.move(self.data_path, storage.data_path)
 
     @property
     def date(self):

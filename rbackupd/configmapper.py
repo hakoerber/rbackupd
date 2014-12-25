@@ -488,6 +488,16 @@ class ConfigMapper(object):
             self.section_dict[const.CONF_KEY_REMOTE_USER] = value
 
         @property
+        def auto_add_host_key(self):
+            return self.outer._sanitize(self.section_dict[
+                const.CONF_KEY_AUTO_ADD_HOST_KEY])
+
+        @auto_add_host_key.setter
+        @_write_config_after
+        def auto_add_host_key(self, value):
+            self.section_dict[const.CONF_KEY_AUTO_ADD_HOST_KEY] = value
+
+        @property
         def interval_names(self):
             return self.section_dict[const.CONF_SECTION_INTERVALS].keys()
 
