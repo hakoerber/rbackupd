@@ -1,0 +1,9 @@
+eclipse.preferences.version=1
+encoding//rbackupd/backupmanager.py=utf-8
+encoding//rbackupd/configmanager.py=utf-8
+encoding//rbackupd/constants.py=utf-8
+encoding//rbackupd/cron.py=utf-8
+encoding//rbackupd/daemon.py=utf-8
+encoding//rbackupd/interval.py=utf-8
+encoding//rbackupd/rsync.py=utf-8
+encoding//rbackupd/task.py=utf-8

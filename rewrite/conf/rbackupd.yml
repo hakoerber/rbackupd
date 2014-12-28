@@ -1,0 +1,51 @@
+logging:
+    logfile: /home/hannes/.var/log/rbackupd/rbackupd.log
+    loglevel: debug
+
+backupmodules:
+    rsync:
+        type: rsync
+        logfile: true
+        logfile_name: rsync.log
+        logfile_format:
+        filters:
+        includes:
+        includefiles:
+        excludes:
+        excludefiles:
+        create_destination: false
+        one_fs: false
+        args: "-aHAXvh --relative --no-implied-dirs"
+
+storagemodules:
+    localstorage:
+        type: filesystem
+        #path: /var/rbackupd/storage
+        path: /home/hannes/development/testing/storage
+
+timermodules:
+    daily:
+        type: cron
+        interval: 30 0 * * * *
+        keep: 7
+        age: 1M
+    hourly:
+        type: cron
+        interval: 0 * * * * *
+        keep: 24
+        age: 1d
+
+tasks:
+    main:
+        backupmodule:
+            name: rsync
+        storagemodule:
+            name: localstorage
+        sources:
+            - /home/
+            - /root/
+            - /etc/
+            - /usr/local/
+        timers:
+            - daily
+            - hourly

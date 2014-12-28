@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2014 Hannes Körber <hannes.koerber+rbackupd@gmail.com>
 
-import sys
-
-import rbackupc.client
+def main():
+    import sys
+    import rbackupd.daemon
+    rbackupd.daemon.main(sys.argv[1:])
 
 if __name__ == "__main__":
-    rbackupc.client.main(sys.argv[1:])
+    main()
